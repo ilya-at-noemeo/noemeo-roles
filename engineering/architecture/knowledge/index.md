@@ -22,5 +22,4 @@ change just because the role has learned something.
 
 ## Entries
 
-_None yet -- this knowledge base is freshly scaffolded, proving the
-pattern on the architecture role before extending it to the others._
+- [Series vs. cluster: don't overload a name for two different mechanisms](series-vs-cluster-naming.md) — general naming principle (different mechanism → different name), from resolving noemeo-roles#2.
