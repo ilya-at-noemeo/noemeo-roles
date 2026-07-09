@@ -71,3 +71,17 @@ why). When picking up an existing product, read that product's own
 `docs/architecture.md` (e.g. `noemeo-backend/docs/architecture.md`) in
 full before proposing changes -- it's written to be a working reference,
 not just a record of past discussion.
+
+## Before starting: accumulated knowledge and open items
+
+This role accumulates knowledge over time, separate from this static
+definition -- read
+[`architecture/knowledge/index.md`](architecture/knowledge/index.md)
+before starting nontrivial work, not just this file.
+
+Also check GitHub issues labeled `role:architecture` in this repo --
+these are open items raised by this role for later, or by another role
+for this one, awaiting action. See the README's "Cross-role and deferred
+communication" section for the convention. If you notice something in the
+course of this work that another role (or this role, later) needs to
+address, open one rather than letting it go untracked.

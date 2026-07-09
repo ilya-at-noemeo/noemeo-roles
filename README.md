@@ -1,9 +1,11 @@
 # noemeo-roles
 
 Definitions of Noemeo's internal working roles -- analogous to CTO, Staff
-Engineer, Product Manager, QA Lead -- meant to be read by an LLM (any
-provider) that has been asked to act in that capacity for a conversation or
-a thread.
+Engineer, Product Manager, QA Lead. **A role can be filled by a human or by
+an AI, or by both over time** -- everything in this repo, including
+accumulated knowledge (see below), is written to be equally usable for
+onboarding a human into the role and for briefing an LLM (any provider)
+asked to act in that capacity.
 
 ## What this repo is, and isn't
 
@@ -33,6 +35,56 @@ the relevant `noemeo-foundation` documents and at the specific product's
 own docs (e.g. `noemeo-backend/docs/`) as needed, don't assume prior
 conversation history.
 
+## Persistent, role-specific knowledge
+
+A role definition (`architecture.md`) is deliberately static -- scope,
+judgment lens, boundaries, rarely changing. That's not enough on its own:
+a role should get *better* at its job over time, accumulating decisions,
+rationale, and learnings from actually doing the work, the same way a real
+employee does. Each role that has this enabled gets a `knowledge/`
+directory next to its definition file:
+
+```text
+engineering/
+  architecture.md
+  architecture/
+    knowledge/
+      index.md        -- topic index, one line per entry
+      <topic>.md       -- the actual accumulated content
+```
+
+Plain markdown, human-readable, no embeddings-only or opaque storage --
+the same constraint that applies to the role definitions applies here,
+since a human onboarding into a role needs to be able to read it directly.
+
+Company-wide (cross-role) accumulated knowledge is a related but separate
+concern, intentionally not designed yet -- starting with role-specific
+knowledge only, proven on one role before generalizing.
+
+## Cross-role and deferred communication
+
+When whoever is filling a role (human or AI) notices something that needs
+attention from a *different* role, or from the *same* role but *later*
+(not part of the current thread's work), the mechanism is a **GitHub
+issue in this repo** -- not an ad-hoc note left in a chat transcript that
+nobody will see again.
+
+- Label the issue `role:<name>` for whichever role should address it
+  (`role:product-vision`, `role:architecture`, `role:implementation`,
+  `role:testing`). Apply more than one label if it's relevant to several
+  roles.
+- State plainly what needs attention and why -- enough for whoever picks
+  up that role cold, human or AI, to act on it without needing the
+  original conversation's context.
+- Whoever assumes a role should check open issues labeled for that role
+  as part of picking up the work, the same way a real employee checks
+  their queue before starting the day.
+
+This is deliberately separate from `knowledge/`: **issues are open items
+awaiting action; `knowledge/` is settled, accumulated understanding.**
+Once an issue is resolved, whatever durable learning came out of it (if
+any) belongs in `knowledge/`, not left sitting in a closed issue.
+
 ## Structure
 
 ```text
@@ -40,6 +92,8 @@ product/
   vision.md          -- product vision & positioning
 engineering/
   architecture.md     -- system design, boundaries, schemas, tech choices
+  architecture/
+    knowledge/          -- accumulated architecture-role knowledge
   implementation.md    -- writing code against an agreed architecture
   testing.md            -- verification, edge cases, adversarial review
 ```
@@ -48,7 +102,9 @@ Roles are grouped by department. Only the roles with active, current use
 are defined so far -- see the individual documents' "Hands off to /
 receives from" sections for how they relate to each other. More
 departments (marketing, operations) and roles may be added later, but only
-once there's a real need for them, not speculatively.
+once there's a real need for them, not speculatively. Likewise,
+`knowledge/` is scaffolded for the architecture role only for now --
+proving the pattern before extending it to the others.
 
 ## Document shape
 
