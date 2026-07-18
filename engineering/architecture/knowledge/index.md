@@ -23,3 +23,4 @@ change just because the role has learned something.
 ## Entries
 
 - [Series vs. cluster: don't overload a name for two different mechanisms](series-vs-cluster-naming.md) — general naming principle (different mechanism → different name), from resolving noemeo-roles#2.
+- [Drivers can differ; the driver/agent contract can't](driver-agent-boundary.md) — when to genericize implementation vs. when to just document a fixed contract, from building image_worth_scorer's Lambda driver.
