@@ -84,7 +84,10 @@ boundaries, cost structure or data custody.
 ## Working with this role
 
 Procedures live in skills (`skills/noemeo-llm-engineering`,
-`skills/noemeo-prompt-engineering`, `skills/noemeo-ml-engineering`);
+`skills/noemeo-prompt-engineering`, `skills/noemeo-ml-engineering`); in
+Claude Code, `agents/noemeo-ai-engineer` fills this role in its own
+context for delegated work (adapted from the community
+`data-ai/ai-engineer` template);
 the reusable plumbing (LLM client seam, structured-output invocation,
 token usage, prompt hashing, the cloud chat contract) lives in
 `noemeo-agent-kit`. Read the decision log (`../decisions/`) and the

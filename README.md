@@ -8,7 +8,7 @@ things live here:
   that designs and changes are reviewed against. Start here.
 - **`skills/`, `agents/`** -- reusable procedures and a few agents,
   packaged as a Claude Code plugin (`noemeo`), e.g.
-  `noemeo-design-review`, `noemeo-code-reviewer`.
+  `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
 - **`product/`, `engineering/`** -- role definitions (product vision,
   architecture, AI engineering, implementation, testing): scope, judgment and
   boundaries for a kind of work, usable by a human or any LLM.
@@ -53,15 +53,20 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
+| `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
 Skills use the open `SKILL.md` format (name + description frontmatter,
 plain Markdown body), readable by people and by other agent tools.
-**Agents only when a separate context is the point** -- e.g. a reviewer
-that must not share the author's reasoning. Each is a thin adapter for
-a role definition here (`noemeo-code-reviewer` fills
-`engineering/testing.md`); keep the two in sync, and keep role
-definitions themselves provider-neutral.
+**Agents only when a separate context is the point** -- a reviewer that
+must not share the author's reasoning, or a self-contained piece of a
+role's work worth delegating. Each is a thin adapter for a role
+definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
+`noemeo-ai-engineer` fills `engineering/ai-engineering.md`): it loads the
+role and the skills rather than restating them. Keep role definitions
+provider-neutral, and adapt third-party agent templates this way instead
+of installing them as-is (they reference agents and stacks that don't
+exist here).
 
 For general bug-hunting, security and cleanup, use Claude Code's
 built-ins rather than duplicating them: `/code-review`,
