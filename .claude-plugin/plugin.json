@@ -1,0 +1,9 @@
+{
+  "name": "noemeo",
+  "version": "0.1.0",
+  "description": "Noemeo's working skills for Claude Code: design review against the Noemeo decision log, and more to come.",
+  "author": {
+    "name": "Ilya Ivensky"
+  },
+  "repository": "https://github.com/ilya-at-noemeo/noemeo-roles"
+}

@@ -66,6 +66,5 @@ for this to work."
 **Receives from:** no upstream role within this repo -- product vision
 originates from direct founder input, user feedback, and market signal,
 not from another role's output. When picking up an existing product,
-read that product's own `docs/product-vision.md` (e.g.
-`noemeo-backend/docs/product-vision.md`) for prior decisions before
-proposing new ones.
+read that product's own `docs/product-vision.md` for prior decisions
+before proposing new ones.

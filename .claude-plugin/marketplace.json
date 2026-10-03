@@ -1,0 +1,16 @@
+{
+  "name": "noemeo-roles",
+  "owner": {
+    "name": "Ilya Ivensky"
+  },
+  "metadata": {
+    "description": "Noemeo's own Claude Code plugins: generic working skills shared across Noemeo repos."
+  },
+  "plugins": [
+    {
+      "name": "noemeo",
+      "source": "./",
+      "description": "Noemeo's working skills: design review against the decision log, and more to come."
+    }
+  ]
+}

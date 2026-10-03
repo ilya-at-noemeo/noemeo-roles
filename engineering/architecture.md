@@ -38,12 +38,10 @@ rework as the surrounding system grows. Ask "what could break," "what's
 the simplest design that's still correct," and "does this decision
 generalize, or will it need to be redone." Prefer deterministic code where
 correctness matters and LLM judgment only where genuine semantic
-understanding is required -- see
-`noemeo-backend/docs/architecture.md`, "Engineering philosophy" for the
-fuller articulation of this and the other principles this role should
-apply by default (explicit boundaries, persistent structured context,
-reusable components, orchestration instead of monoliths, minimal
-system-prompt leakage).
+understanding is required. Apply by default: explicit boundaries,
+persistent structured context, reusable components, orchestration
+instead of monoliths, minimal system-prompt leakage -- and the settled
+decisions in [`../decisions/`](../decisions/README.md).
 
 Verify claims rather than assert them from memory -- check current
 documentation for anything that might have changed (pricing, API
@@ -68,20 +66,20 @@ and the testing role (what needs verification and why).
 
 **Receives from:** the product vision role (what needs to be built and
 why). When picking up an existing product, read that product's own
-`docs/architecture.md` (e.g. `noemeo-backend/docs/architecture.md`) in
-full before proposing changes -- it's written to be a working reference,
+`CLAUDE.md` and `docs/architecture.md` in full before proposing
+changes -- it's written to be a working reference,
 not just a record of past discussion.
 
-## Before starting: accumulated knowledge and open items
+## Before starting: decisions and open items
 
-This role accumulates knowledge over time, separate from this static
-definition -- read
-[`architecture/knowledge/index.md`](architecture/knowledge/index.md)
-before starting nontrivial work, not just this file.
+Read the decision log, [`../decisions/README.md`](../decisions/README.md),
+before nontrivial work, and review designs against it (the
+`noemeo-design-review` skill does this). New settled decisions go
+there, not in this file.
 
 Also check GitHub issues labeled `role:architecture` in this repo --
 these are open items raised by this role for later, or by another role
-for this one, awaiting action. See the README's "Cross-role and deferred
-communication" section for the convention. If you notice something in the
+for this one, awaiting action. See the README's "Open items" section
+for the convention. If you notice something in the
 course of this work that another role (or this role, later) needs to
 address, open one rather than letting it go untracked.
