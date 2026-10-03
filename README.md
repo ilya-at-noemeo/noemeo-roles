@@ -6,8 +6,9 @@ things live here:
 - **`decisions/`** -- the decision log: settled, generic decisions
   (driver/agent boundary, repo ownership, environments, no VPC...)
   that designs and changes are reviewed against. Start here.
-- **`skills/`** -- reusable procedures, packaged as a Claude Code plugin
-  (`noemeo`), e.g. `noemeo-design-review`.
+- **`skills/`, `agents/`** -- reusable procedures and a few agents,
+  packaged as a Claude Code plugin (`noemeo`), e.g.
+  `noemeo-design-review`, `noemeo-code-reviewer`.
 - **`product/`, `engineering/`** -- role definitions (product vision,
   architecture, implementation, testing): scope, judgment and
   boundaries for a kind of work, usable by a human or any LLM.
@@ -28,30 +29,35 @@ index. One decision per numbered file, each ending in concrete
 **Review checks**. To change a decision, add a new one that supersedes
 it. Product-specific decisions don't go here.
 
-## Skills (Claude Code plugin)
+## Skills and agents (Claude Code plugin)
 
 The repo root is a Claude Code plugin marketplace with one plugin,
-`noemeo`, whose skills are in `skills/`. Install once, at user scope,
+`noemeo`: skills in `skills/`, agents in `agents/`. Install once, at user scope,
 and the skills are available in every repo:
 
-```text
-/plugin marketplace add ~/workspace/noemeo/noemeo-roles
-/plugin install noemeo@noemeo-roles
+```bash
+claude plugin marketplace add ~/workspace/noemeo/noemeo-roles
+claude plugin install noemeo@noemeo-roles --scope user
 ```
 
-After editing a skill or decision, run `/plugin update noemeo` (or
-`claude plugin update noemeo`) so the installed copy picks it up -- the
-plugin is installed as a copy, not a live link. Validate manifests with
+(`/plugin ...` in the terminal CLI does the same; the IDE extension
+doesn't have `/plugin`.) After editing a skill, agent or decision, run
+`claude plugin update noemeo@noemeo-roles` and start a new session --
+the plugin is installed as a copy, not a live link. Validate manifests with
 `claude plugin validate .`.
 
-| Skill | Use it for |
-| --- | --- |
-| `noemeo-design-review` | Reviewing a design, plan or diff against the decision log and the current repo's `CLAUDE.md` |
+| Name | Kind | Use it for |
+| --- | --- | --- |
+| `noemeo-design-review` | skill | Reviewing a design, plan or diff against the decision logs and the current repo's `CLAUDE.md` |
+| `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
 Skills use the open `SKILL.md` format (name + description frontmatter,
 plain Markdown body), readable by people and by other agent tools.
-Provider-specific agent definitions (subagent personas with tool
-lists) don't belong here; role definitions stay provider-neutral.
+**Agents only when a separate context is the point** -- e.g. a reviewer
+that must not share the author's reasoning. Each is a thin adapter for
+a role definition here (`noemeo-code-reviewer` fills
+`engineering/testing.md`); keep the two in sync, and keep role
+definitions themselves provider-neutral.
 
 For general bug-hunting, security and cleanup, use Claude Code's
 built-ins rather than duplicating them: `/code-review`,
