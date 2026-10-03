@@ -49,6 +49,7 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | Name | Kind | Use it for |
 | --- | --- | --- |
 | `noemeo-design-review` | skill | Reviewing a design, plan or diff against the decision logs and the current repo's `CLAUDE.md` |
+| `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
 Skills use the open `SKILL.md` format (name + description frontmatter,

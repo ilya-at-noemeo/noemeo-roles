@@ -35,8 +35,11 @@ or plan, the relevant `docs/` section -- and the repo's own rules
 
 Invoke the `noemeo-design-review` skill on the same target and carry
 its findings into your report (don't repeat its analysis by hand). If
-the skill isn't available, say so and check the repo's `CLAUDE.md`
-rules yourself.
+the change touches IAM or deploy access -- `aws_iam_*` resources,
+policy documents, trust/OIDC, execution roles, or workflows that assume
+AWS roles -- also invoke `noemeo-iam-review` (static only; don't run
+its optional AWS step). If a skill isn't available, say so and check
+the repo's `CLAUDE.md` rules yourself.
 
 ## 3. Adversarial read
 

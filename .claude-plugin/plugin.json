@@ -1,7 +1,7 @@
 {
   "name": "noemeo",
-  "version": "0.2.0",
-  "description": "Noemeo's working skills and agents for Claude Code: design review against the decision logs, and an independent code reviewer.",
+  "version": "0.3.4",
+  "description": "Noemeo's working skills and agents for Claude Code: design review against the decision logs, IAM security review, and an independent code reviewer.",
   "author": {
     "name": "Ilya Ivensky"
   },
