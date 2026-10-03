@@ -38,8 +38,11 @@ its findings into your report (don't repeat its analysis by hand). If
 the change touches IAM or deploy access -- `aws_iam_*` resources,
 policy documents, trust/OIDC, execution roles, or workflows that assume
 AWS roles -- also invoke `noemeo-iam-review` (static only; don't run
-its optional AWS step). If a skill isn't available, say so and check
-the repo's `CLAUDE.md` rules yourself.
+its optional AWS step). If it touches LLM calls, agents or prompts, use
+the review mode of `noemeo-llm-engineering` / `noemeo-prompt-engineering`
+(no paid live calls); for trained models, `noemeo-ml-engineering`. If a
+skill isn't available, say so and check the repo's `CLAUDE.md` rules
+yourself.
 
 ## 3. Adversarial read
 

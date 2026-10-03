@@ -10,7 +10,7 @@ things live here:
   packaged as a Claude Code plugin (`noemeo`), e.g.
   `noemeo-design-review`, `noemeo-code-reviewer`.
 - **`product/`, `engineering/`** -- role definitions (product vision,
-  architecture, implementation, testing): scope, judgment and
+  architecture, AI engineering, implementation, testing): scope, judgment and
   boundaries for a kind of work, usable by a human or any LLM.
 
 This repo is **generic**: nothing here names or links a product or
@@ -49,6 +49,9 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | Name | Kind | Use it for |
 | --- | --- | --- |
 | `noemeo-design-review` | skill | Reviewing a design, plan or diff against the decision logs and the current repo's `CLAUDE.md` |
+| `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
+| `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: structure, principles, injection resistance, prompt hashes, before/after evidence |
+| `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
@@ -71,6 +74,7 @@ product/
   vision.md          -- product vision & positioning
 engineering/
   architecture.md    -- system design, boundaries, schemas, tech choices
+  ai-engineering.md  -- model-backed components: LLMs, prompts, evals, ML
   implementation.md  -- writing code against an agreed architecture
   testing.md         -- verification, edge cases, adversarial review
 ```
@@ -87,7 +91,7 @@ need.
 Something noticed now that needs attention later, or from a different
 kind of work, goes in a **GitHub issue in this repo**, labeled
 `role:<name>` (`role:product-vision`, `role:architecture`,
-`role:implementation`, `role:testing`). State what needs attention and
+`role:ai-engineering`, `role:implementation`, `role:testing`). State what needs attention and
 why, enough for someone picking it up cold. Issues are open items;
 once resolved, any durable decision that came out of one goes in
 `decisions/`, referencing the issue number.

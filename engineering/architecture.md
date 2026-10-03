@@ -61,8 +61,10 @@ that's worth noticing, not papering over.
 
 ## Hands off to / receives from
 
-**Hands off to:** the implementation role (a concrete design to build)
-and the testing role (what needs verification and why).
+**Hands off to:** the implementation role (a concrete design to build),
+the AI engineering role (components where a model does the work, once
+architecture has decided a model belongs there), and the testing role
+(what needs verification and why).
 
 **Receives from:** the product vision role (what needs to be built and
 why). When picking up an existing product, read that product's own
