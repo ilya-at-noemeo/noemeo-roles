@@ -50,11 +50,12 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | --- | --- | --- |
 | `noemeo-design-review` | skill | Reviewing a design, plan or diff against the decision logs and the current repo's `CLAUDE.md` |
 | `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
-| `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: structure, principles, injection resistance, prompt hashes, before/after evidence |
+| `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: measured baseline, provider-aware structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
 | `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results |
+| `noemeo-prompt-engineer` | agent | Delegated prompt design/optimization/hardening on a fixed model, with before/after numbers (AI engineering role) |
 | `noemeo-ux-designer` | agent | Independent UI/UX review in its own context (UX design role). Read-only. |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
