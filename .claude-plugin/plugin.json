@@ -1,7 +1,7 @@
 {
   "name": "noemeo",
-  "version": "0.5.0",
-  "description": "Noemeo's working skills and agents for Claude Code: design review, IAM review, LLM/prompt/ML engineering, an AI engineer agent and an independent code reviewer.",
+  "version": "0.6.0",
+  "description": "Noemeo's working skills and agents for Claude Code: design, IAM and UX review; LLM/prompt/ML engineering; AI engineer, UX designer and code reviewer agents.",
   "author": {
     "name": "Ilya Ivensky"
   },

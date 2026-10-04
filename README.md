@@ -9,8 +9,8 @@ things live here:
 - **`skills/`, `agents/`** -- reusable procedures and a few agents,
   packaged as a Claude Code plugin (`noemeo`), e.g.
   `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
-- **`product/`, `engineering/`** -- role definitions (product vision,
-  architecture, AI engineering, implementation, testing): scope, judgment and
+- **`product/`, `engineering/`** -- role definitions (product vision, UX
+  design, architecture, AI engineering, implementation, testing): scope, judgment and
   boundaries for a kind of work, usable by a human or any LLM.
 
 This repo is **generic**: nothing here names or links a product or
@@ -52,8 +52,10 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
+| `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results |
+| `noemeo-ux-designer` | agent | Independent UI/UX review in its own context (UX design role). Read-only. |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 
 Skills use the open `SKILL.md` format (name + description frontmatter,
@@ -62,7 +64,8 @@ plain Markdown body), readable by people and by other agent tools.
 must not share the author's reasoning, or a self-contained piece of a
 role's work worth delegating. Each is a thin adapter for a role
 definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
-`noemeo-ai-engineer` fills `engineering/ai-engineering.md`): it loads the
+`noemeo-ai-engineer` fills `engineering/ai-engineering.md`,
+`noemeo-ux-designer` fills `product/ux-design.md`): it loads the
 role and the skills rather than restating them. Keep role definitions
 provider-neutral, and adapt third-party agent templates this way instead
 of installing them as-is (they reference agents and stacks that don't
@@ -77,6 +80,7 @@ built-ins rather than duplicating them: `/code-review`,
 ```text
 product/
   vision.md          -- product vision & positioning
+  ux-design.md       -- flows, visual design, accessibility, AI-output presentation
 engineering/
   architecture.md    -- system design, boundaries, schemas, tech choices
   ai-engineering.md  -- model-backed components: LLMs, prompts, evals, ML
@@ -96,7 +100,8 @@ need.
 Something noticed now that needs attention later, or from a different
 kind of work, goes in a **GitHub issue in this repo**, labeled
 `role:<name>` (`role:product-vision`, `role:architecture`,
-`role:ai-engineering`, `role:implementation`, `role:testing`). State what needs attention and
+`role:ux-design`, `role:ai-engineering`, `role:implementation`,
+`role:testing`). State what needs attention and
 why, enough for someone picking it up cold. Issues are open items;
 once resolved, any durable decision that came out of one goes in
 `decisions/`, referencing the issue number.
