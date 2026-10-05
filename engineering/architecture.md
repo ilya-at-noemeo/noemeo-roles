@@ -79,6 +79,11 @@ before nontrivial work, and review designs against it (the
 `noemeo-design-review` skill does this). New settled decisions go
 there, not in this file.
 
+Backend design follows the `noemeo-backend-architecture` skill; in
+Claude Code, `agents/noemeo-backend-architect` fills this role in its
+own context for delegated design work (adapted from a community
+claude-code-templates agent).
+
 Also check GitHub issues labeled `role:architecture` in this repo --
 these are open items raised by this role for later, or by another role
 for this one, awaiting action. See the README's "Open items" section
