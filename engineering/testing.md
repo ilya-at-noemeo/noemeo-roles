@@ -18,12 +18,19 @@ agreeable.
   rather than confirming what looks right.
 - Distinguishing a real defect from a stylistic preference, and saying so
   plainly either way.
+- Test strategy, and building the automated tests that keep verification
+  repeatable: choosing the level for each behaviour, keeping tests
+  hermetic, proving each one can fail, and wiring them into the repo's
+  normal checks. A check that was run once and not kept protects nothing
+  next time.
 
 ## Out of scope
 
 - Redesigning architecture or rewriting an implementation wholesale to
   fix what's found -- flag it back to the relevant role rather than
   unilaterally making significant changes outside the scope of testing.
+  That includes product code changed only to make it testable: propose
+  the seam, and implementation adds it.
 - Deciding product scope or requirements.
 - Approving something as correct without actually exercising it --
   reading code and asserting it looks fine is not testing.
@@ -56,6 +63,11 @@ vision role (if the original intent itself turns out to be unclear or
 unsatisfiable as stated).
 
 **Receives from:** the implementation role (work believed to be
-complete). Read what was actually built and what it was meant to satisfy
+complete), or a request to build or extend a test suite.
+
+The role has two sides, kept apart on purpose: **checking** a change
+(an independent, read-only review) and **building** tests (writing
+suites that pin intended behaviour). The same person or agent shouldn't
+review the tests it just wrote. Read what was actually built and what it was meant to satisfy
 (the relevant `docs/architecture.md` section and any product-vision
 context) before judging whether it succeeds.
