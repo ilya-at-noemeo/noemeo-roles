@@ -81,6 +81,41 @@ For general bug-hunting, security and cleanup, use Claude Code's
 built-ins rather than duplicating them: `/code-review`,
 `/security-review`, `/simplify`.
 
+## Hooks (Claude Code plugin)
+
+The same plugin ships hooks (`hooks/hooks.json`), so they run in every
+repo it's enabled in. Guarantees, not suggestions: each runs on its
+lifecycle event whatever the model decides.
+
+| Event | Hook | Does |
+| --- | --- | --- |
+| PreToolUse | `guard.py` | Denies `rm -rf`, force-pushes, `git clean -f`, and Bash or file-tool access to secrets: `.env`/`.env.*` (not `.env.example`), `*.pem`, `.certs/`, `.aws/credentials`. Commit messages and PR bodies that only mention them are allowed. |
+| SessionStart | `session_context.sh` | Adds branch, uncommitted files, recent commits, open GitHub issues and the last failing test run to the session. |
+| PostToolUse | `ruff_touched_file.sh` | `ruff check --fix` then `ruff format` on each edited `.py` file; unfixable lint goes back to Claude. |
+| Stop | `stop_tests.py` | `pytest -x -q`; a failure blocks the turn from ending and is handed back. Skipped when the tree is unchanged since the last green run. |
+
+A repo opts in to the last two by having what they need, nothing else:
+
+- **ruff:** a `[tool.ruff]` table in its `pyproject.toml` and ruff in its
+  `.venv` (a dev dependency). Without both, edits aren't touched -- so
+  adopting it is a deliberate one-time format commit, not drift.
+- **tests:** pytest in its `.venv`.
+
+A repo with secrets of its own lists them in `.claude/noemeo-guard.json`,
+as literal names or `*.<ext>`:
+
+```json
+{ "secrets": [".my_tokens.json", "*.p12"] }
+```
+
+The guard reads command text, not intent, so it errs toward denying:
+a heredoc that feeds a script and merely *mentions* a blocked command
+or secret is denied too. Write such text with the file tools instead.
+
+Tool-specific hooks for other stacks (`terraform fmt`, say) get added
+here once a repo actually needs one (decision 0003). Review or disable
+hooks with `/hooks`.
+
 ## Role definitions
 
 ```text
