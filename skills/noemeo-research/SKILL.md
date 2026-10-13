@@ -13,8 +13,9 @@ inputs), `noemeo-ml-engineering` (splits, leakage).
 ## Step 1: Read the ground rules
 
 The product's `CLAUDE.md`, its research index (where studies live, their
-layout, data rules) and `docs/decisions/`, plus this repo's
-`../../decisions/`. Note what may not be used (users' content, sessions,
+layout, data rules) and `docs/decisions/`, plus the generic decision
+log in `../noemeo-foundation/decisions/` (a sibling checkout). Note
+what may not be used (users' content, sessions,
 paid calls without approval) before designing anything.
 
 ## Step 2: Frame the claim

@@ -18,8 +18,9 @@ are options to justify here, not starting points.
 
 ## Step 1: Context
 
-1. **Decisions:** read `../../decisions/` relative to this skill's base
-   directory -- especially 0002 (driver/agent boundary), 0003 (build
+1. **Decisions:** read the generic decision log,
+   `../noemeo-foundation/decisions/` from the current repo's root (a
+   sibling checkout) -- especially 0002 (driver/agent boundary), 0003 (build
    capacity, not usage), 0006 (infra repo ownership), 0007
    (environments) and 0008 (no VPC by default).
 2. **The repo:** its `CLAUDE.md`, `docs/architecture.md`,
@@ -126,7 +127,8 @@ in the reply) with:
 8. **Hand-offs** -- what implementation builds first, what AI
    engineering owns, and what the testing role must verify for the
    design to count as correct. A settled, generic choice becomes a
-   proposed entry in `decisions/`; a product-specific one goes in the
+   proposed entry in noemeo-foundation's `decisions/`; a
+   product-specific one goes in the
    product's `docs/decisions/`.
 
 ## Review mode

@@ -1,6 +1,6 @@
 ---
 name: noemeo-design-review
-description: Reviews a design doc, plan, PR, diff or proposed change against Noemeo's standing decisions (the decision log in noemeo-roles) and the current repo's own CLAUDE.md rules, and reports each violation with the decision it breaks, where, and a suggested fix. Use when asked to review a design, plan, architecture or change "against Noemeo's decisions" or for consistency, before implementing a change to cloud, infrastructure, IAM/CI, agents or a generic repo's contracts, or before committing such a change in any Noemeo repo.
+description: Reviews a design doc, plan, PR, diff or proposed change against Noemeo's standing decisions (the decision log in noemeo-foundation) and the current repo's own CLAUDE.md rules, and reports each violation with the decision it breaks, where, and a suggested fix. Use when asked to review a design, plan, architecture or change "against Noemeo's decisions" or for consistency, before implementing a change to cloud, infrastructure, IAM/CI, agents or a generic repo's contracts, or before committing such a change in any Noemeo repo.
 ---
 
 # Noemeo design review
@@ -21,11 +21,13 @@ reviewed.
 
 ## Step 2: Load the rules
 
-1. **Generic decisions:** read every `*.md` in `../../decisions/`
-   relative to this skill's base directory (start with its `README.md`
-   index). Use only decisions whose status is Accepted. If the
-   directory can't be found, say so and continue with step 2.2 only --
-   don't invent decisions from memory.
+1. **Generic decisions:** read every `*.md` in the generic decision
+   log, `decisions/` in the private `noemeo-foundation` repo, found as
+   a sibling checkout: `../noemeo-foundation/decisions/` from the
+   current repo's root (start with its `README.md` index). Use only
+   decisions whose status is Accepted. If the directory can't be found,
+   say so and continue with step 2.2 only -- don't invent decisions
+   from memory.
 2. **Repo rules:** the current repo's `docs/decisions/*.md` if it has
    a decision log (product repos do; cite these as e.g.
    `product 0001`), its `CLAUDE.md` (and any nested `CLAUDE.md` in the

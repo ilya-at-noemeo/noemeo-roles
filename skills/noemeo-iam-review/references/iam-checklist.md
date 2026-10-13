@@ -1,7 +1,7 @@
 # IAM checklist
 
 Generic to all Noemeo repos. Decision numbers refer to
-`decisions/` in noemeo-roles.
+`decisions/` in noemeo-foundation.
 
 ## Trust policies (who can assume)
 

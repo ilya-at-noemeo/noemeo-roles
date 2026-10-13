@@ -90,5 +90,5 @@ context for delegated work, prompt-only work on a fixed model included
 (adapted from community claude-code-templates agents);
 the reusable plumbing (LLM client seam, structured-output invocation,
 token usage, prompt hashing, the cloud chat contract) lives in
-`noemeo-agent-kit`. Read the decision log (`../decisions/`) and the
+`noemeo-agent-kit`. Read the decision log (noemeo-foundation's `decisions/`) and the
 product's own `CLAUDE.md` and `docs/decisions/` before nontrivial work.

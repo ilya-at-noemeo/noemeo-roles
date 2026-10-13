@@ -1,11 +1,8 @@
 # noemeo-roles
 
-How Noemeo work gets done, shared across every Noemeo repo. Three
+How Noemeo work gets done, shared across every Noemeo repo. Two
 things live here:
 
-- **`decisions/`** -- the decision log: settled, generic decisions
-  (driver/agent boundary, repo ownership, environments, no VPC...)
-  that designs and changes are reviewed against. Start here.
 - **`skills/`, `agents/`** -- reusable procedures and a few agents,
   packaged as a Claude Code plugin (`noemeo`), e.g.
   `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
@@ -18,17 +15,19 @@ This repo is **generic**: nothing here names or links a product or
 product-specific repo (decision 0004). Product-specific rules live in
 each product's own `CLAUDE.md` and `docs/`; skills read both.
 
-Everything is grounded in
-[`noemeo-foundation`](https://github.com/ilya-at-noemeo/noemeo-foundation)
--- the company-wide mission, principles and ethics. Anything here that
+Everything is grounded in `noemeo-foundation` (private) -- the
+company-wide mission, principles and ethics. Anything here that
 contradicts the foundation is wrong, not the foundation.
 
 ## Decision log
 
-See [`decisions/README.md`](decisions/README.md) for the format and
-index. One decision per numbered file, each ending in concrete
-**Review checks**. To change a decision, add a new one that supersedes
-it. Product-specific decisions don't go here.
+The skills and agents review work against Noemeo's decision log:
+settled, generic decisions (driver/agent boundary, repo ownership,
+environments, no VPC...) cited by number, e.g. "decision 0002". The
+log is private and lives in `noemeo-foundation`'s `decisions/`. Skills
+look for it as a sibling checkout, `../noemeo-foundation/decisions/`
+from the current repo's root. Without it they say so and review
+against the current repo's own `CLAUDE.md` and `docs/decisions/` only.
 
 ## Skills and agents (Claude Code plugin)
 
@@ -42,7 +41,7 @@ claude plugin install noemeo@noemeo-roles --scope user
 ```
 
 (`/plugin ...` in the terminal CLI does the same; the IDE extension
-doesn't have `/plugin`.) After editing a skill, agent or decision, run
+doesn't have `/plugin`.) After editing a skill or agent, run
 `claude plugin update noemeo@noemeo-roles` and start a new session --
 the plugin is installed as a copy, not a live link. Validate manifests with
 `claude plugin validate .`.
@@ -149,10 +148,15 @@ need.
 ## Open items: GitHub issues
 
 Something noticed now that needs attention later, or from a different
-kind of work, goes in a **GitHub issue in this repo**, labeled
+kind of work, goes in a **GitHub issue in `noemeo-foundation`**
+(private, since open items often name products), labeled
 `role:<name>` (`role:product-vision`, `role:architecture`,
 `role:ux-design`, `role:ai-engineering`, `role:implementation`,
 `role:testing`). State what needs attention and
 why, enough for someone picking it up cold. Issues are open items;
 once resolved, any durable decision that came out of one goes in
-`decisions/`, referencing the issue number.
+noemeo-foundation's `decisions/`, referencing the issue number.
+
+## License
+
+Licensed under the [Apache License, Version 2.0](LICENSE).
