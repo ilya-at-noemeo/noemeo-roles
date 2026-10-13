@@ -86,9 +86,8 @@ boundaries, cost structure or data custody.
 Procedures live in skills (`skills/noemeo-llm-engineering`,
 `skills/noemeo-prompt-engineering`, `skills/noemeo-ml-engineering`); in
 Claude Code, `agents/noemeo-ai-engineer` fills this role in its own
-context for delegated work, and `agents/noemeo-prompt-engineer` for
-prompt-only work on a fixed model (both adapted from community
-claude-code-templates agents);
+context for delegated work, prompt-only work on a fixed model included
+(adapted from community claude-code-templates agents);
 the reusable plumbing (LLM client seam, structured-output invocation,
 token usage, prompt hashing, the cloud chat contract) lives in
 `noemeo-agent-kit`. Read the decision log (`../decisions/`) and the
