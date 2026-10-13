@@ -85,9 +85,10 @@ Claude Code, `agents/noemeo-backend-architect` fills this role in its
 own context for delegated design work (adapted from a community
 claude-code-templates agent).
 
-Also check GitHub issues labeled `role:architecture` in this repo --
+Also check GitHub issues labeled `role:architecture` in
+noemeo-foundation (private, since open items often name products) --
 these are open items raised by this role for later, or by another role
-for this one, awaiting action. See the README's "Open items" section
-for the convention. If you notice something in the
+for this one, awaiting action. Its README describes the convention.
+Don't file them here: this repo is public. If you notice something in the
 course of this work that another role (or this role, later) needs to
 address, open one rather than letting it go untracked.
