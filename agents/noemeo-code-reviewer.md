@@ -69,7 +69,11 @@ If something can't be run, say exactly why.
 ## 5. Report
 
 One verdict line first: **Ready**, **Ready with nits**, or **Not
-ready**, plus the target reviewed. Then, most severe first:
+ready**, plus the target reviewed, naming the repo by its absolute path
+(e.g. "**Ready** -- /path/to/repo, branch x against main"). A hook
+records that verdict against the change as it stands, and a PR can only
+be opened for a change whose latest review is Ready or Ready with nits,
+so review the working tree as it will be committed. Then, most severe first:
 
 | # | Severity | Where | Finding | Condition / evidence | Suggested fix |
 |---|---|---|---|---|---|
