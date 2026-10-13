@@ -41,7 +41,8 @@ correctness matters and LLM judgment only where genuine semantic
 understanding is required. Apply by default: explicit boundaries,
 persistent structured context, reusable components, orchestration
 instead of monoliths, minimal system-prompt leakage -- and the settled
-decisions in [`../decisions/`](../decisions/README.md).
+decisions in noemeo-foundation's `decisions/` (private; read from a
+sibling checkout).
 
 Verify claims rather than assert them from memory -- check current
 documentation for anything that might have changed (pricing, API
@@ -74,7 +75,7 @@ not just a record of past discussion.
 
 ## Before starting: decisions and open items
 
-Read the decision log, [`../decisions/README.md`](../decisions/README.md),
+Read the decision log, `decisions/README.md` in noemeo-foundation,
 before nontrivial work, and review designs against it (the
 `noemeo-design-review` skill does this). New settled decisions go
 there, not in this file.

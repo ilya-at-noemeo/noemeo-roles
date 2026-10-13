@@ -13,7 +13,7 @@ for trained models and self-hosted inference. LLM API work:
 
 State the decision the model supports, the input, the prediction, and
 how success is measured in product terms. Check the decision log
-(`../../decisions/`, especially 0003: a self-hosted or trained model
+(`../noemeo-foundation/decisions/`, especially 0003: a self-hosted or trained model
 needs a forcing case) and the repo's `CLAUDE.md`/`docs/decisions/` for
 data-custody rules -- user content may not be usable for training at
 all without consent.

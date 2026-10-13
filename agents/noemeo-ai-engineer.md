@@ -24,7 +24,7 @@ unknown and relevant -- don't re-ask what was given:
    reach the model and any existing eval set.
 5. **Constraints:** the repo's `CLAUDE.md` and `docs/decisions/`
    (what may be sent to a model, which transport applies when), plus
-   noemeo-roles' generic decisions.
+   the generic decisions in `../noemeo-foundation/decisions/`.
 
 Don't propose models, prompts or pipelines while a relevant item is
 unknown.

@@ -31,9 +31,11 @@ out next to the target, read the other half; otherwise list it under
 
 ## Step 2: Load the rules
 
-Read the generic decisions in `../../decisions/` relative to this
-skill's base directory -- at least 0006 (repo ownership, one CI role
-per repo) and 0007 (environments, promotion, OIDC). Then the target
+Read the generic decisions in `../noemeo-foundation/decisions/` from
+the current repo's root (a sibling checkout of the private
+`noemeo-foundation` repo) -- at least 0006 (repo ownership, one CI role
+per repo) and 0007 (environments, promotion, OIDC); if it isn't there,
+say so rather than citing decisions from memory. Then the target
 repo's `CLAUDE.md` (noemeo-iam's has the gated-stack checklist).
 
 ## Step 3: Check

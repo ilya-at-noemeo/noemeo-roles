@@ -11,8 +11,8 @@ on anything that calls an LLM. Prompt text itself: use
 
 ## Step 1: Context
 
-Read the decision log (`../../decisions/` relative to this skill's
-base directory), especially 0002 (driver/agent boundary) and 0003
+Read the generic decision log (`../noemeo-foundation/decisions/` from
+the current repo's root, a sibling checkout), especially 0002 (driver/agent boundary) and 0003
 (build capacity, not usage), and the current repo's `CLAUDE.md` and
 `docs/decisions/` (products record their own rules there: where LLM
 calls may go, what may be sent, which transport applies in which
