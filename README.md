@@ -9,9 +9,10 @@ things live here:
 - **`skills/`, `agents/`** -- reusable procedures and a few agents,
   packaged as a Claude Code plugin (`noemeo`), e.g.
   `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
-- **`product/`, `engineering/`** -- role definitions (product vision, UX
-  design, architecture, AI engineering, implementation, testing): scope, judgment and
-  boundaries for a kind of work, usable by a human or any LLM.
+- **`product/`, `engineering/`, `research/`** -- role definitions (product
+  vision, UX design, architecture, AI engineering, implementation,
+  testing, research): scope, judgment and boundaries for a kind of work,
+  usable by a human or any LLM.
 
 This repo is **generic**: nothing here names or links a product or
 product-specific repo (decision 0004). Product-specific rules live in
@@ -55,12 +56,14 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-backend-architecture` | skill | Designing or reviewing backend systems: data ownership and custody, boundaries, contract-first APIs, failure modes, schemas, security, observability and cost sized to real need |
+| `noemeo-research` | skill | Studies of model-backed features: falsifiable claims, prior work, public benchmarks and their terms, controlled runs with validated graders, research notes and publication packages |
 | `noemeo-test-engineering` | skill | Designing and building automated tests: the right level per behaviour, hermetic and no paid calls, proving tests can fail, wiring into the repo's checks |
 | `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results |
 | `noemeo-prompt-engineer` | agent | Delegated prompt design/optimization/hardening on a fixed model, with before/after numbers (AI engineering role) |
 | `noemeo-backend-architect` | agent | Delegated backend design work in its own context (architecture role): a design doc and its rationale, never product code |
 | `noemeo-ux-designer` | agent | Independent UI/UX review in its own context (UX design role). Read-only. |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
+| `noemeo-researcher` | agent | Delegated research in its own context (research role): study plans, runs within an approved budget, write-ups and publication packages. Never changes product code to make a result happen; never submits externally. |
 | `noemeo-test-engineer` | agent | Building and maintaining test suites in its own context (testing role, building side): unit, integration, browser and host-SDK tests, each shown to fail. Writes tests only, never product code. |
 
 Skills use the open `SKILL.md` format (name + description frontmatter,
@@ -71,6 +74,7 @@ role's work worth delegating. Each is a thin adapter for a role
 definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
 `noemeo-ai-engineer` fills `engineering/ai-engineering.md`,
 `noemeo-backend-architect` fills `engineering/architecture.md`,
+`noemeo-researcher` fills `research/research.md`,
 `noemeo-ux-designer` fills `product/ux-design.md`): it loads the
 role and the skills rather than restating them. `noemeo-test-engineer`
 fills the same testing role as `noemeo-code-reviewer`, from the
