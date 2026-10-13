@@ -12,22 +12,12 @@ things live here:
   usable by a human or any LLM.
 
 This repo is **generic**: nothing here names or links a product or
-product-specific repo (decision 0004). Product-specific rules live in
+product-specific repo. Product-specific rules live in
 each product's own `CLAUDE.md` and `docs/`; skills read both.
 
 Everything is grounded in `noemeo-foundation` (private) -- the
 company-wide mission, principles and ethics. Anything here that
 contradicts the foundation is wrong, not the foundation.
-
-## Decision log
-
-The skills and agents review work against Noemeo's decision log:
-settled, generic decisions (driver/agent boundary, repo ownership,
-environments, no VPC...) cited by number, e.g. "decision 0002". The
-log is private and lives in `noemeo-foundation`'s `decisions/`. Skills
-look for it as a sibling checkout, `../noemeo-foundation/decisions/`
-from the current repo's root. Without it they say so and review
-against the current repo's own `CLAUDE.md` and `docs/decisions/` only.
 
 ## Skills and agents (Claude Code plugin)
 
@@ -48,7 +38,7 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 
 | Name | Kind | Use it for |
 | --- | --- | --- |
-| `noemeo-design-review` | skill | Reviewing a design, plan or diff against the decision logs and the current repo's `CLAUDE.md` |
+| `noemeo-design-review` | skill | Reviewing a design, plan or diff against settled decisions and the current repo's `CLAUDE.md` |
 | `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: measured baseline, provider-aware structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
@@ -122,7 +112,7 @@ a heredoc that feeds a script and merely *mentions* a blocked command
 or secret is denied too. Write such text with the file tools instead.
 
 Tool-specific hooks for other stacks (`terraform fmt`, say) get added
-here once a repo actually needs one (decision 0003). Review or disable
+here once a repo actually needs one. Review or disable
 hooks with `/hooks`.
 
 ## Role definitions
@@ -144,18 +134,6 @@ off to / receives from**. They're most useful as a lens to ask for
 ("review this as the testing role would"), and as onboarding text for a
 person taking on that kind of work. New roles only when there's a real
 need.
-
-## Open items: GitHub issues
-
-Something noticed now that needs attention later, or from a different
-kind of work, goes in a **GitHub issue in `noemeo-foundation`**
-(private, since open items often name products), labeled
-`role:<name>` (`role:product-vision`, `role:architecture`,
-`role:ux-design`, `role:ai-engineering`, `role:implementation`,
-`role:testing`). State what needs attention and
-why, enough for someone picking it up cold. Issues are open items;
-once resolved, any durable decision that came out of one goes in
-noemeo-foundation's `decisions/`, referencing the issue number.
 
 ## License
 
