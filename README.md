@@ -78,7 +78,9 @@ definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
 role and the skills rather than restating them. `noemeo-test-engineer`
 fills the same testing role as `noemeo-code-reviewer`, from the
 building side: one writes the tests, the other checks the change
-independently. Keep role definitions
+independently. Agents run on the session's model unless their frontmatter sets
+`model:` -- `noemeo-test-engineer` and `noemeo-ux-designer` use Sonnet.
+Keep role definitions
 provider-neutral, and adapt third-party agent templates this way instead
 of installing them as-is (they reference agents and stacks that don't
 exist here).
