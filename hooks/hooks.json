@@ -60,7 +60,7 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "noemeo-code-reviewer",
+        "matcher": "(^|:)noemeo-code-reviewer$",
         "hooks": [
           {
             "type": "command",
