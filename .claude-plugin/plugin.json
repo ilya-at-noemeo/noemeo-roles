@@ -1,6 +1,6 @@
 {
   "name": "noemeo",
-  "version": "0.14.0",
+  "version": "0.14.1",
   "description": "Noemeo's working skills and agents for Claude Code: design, IAM and UX review; backend architecture; LLM/prompt/ML and test engineering; research; backend architect, AI engineer, researcher, UX designer, test engineer and code reviewer agents; guard, session-context, review-gate, ruff and test hooks.",
   "author": {
     "name": "Ilya Ivensky"
