@@ -48,6 +48,37 @@ def candidate_bases(repo: Path) -> list[str]:
     return list(dict.fromkeys(bases))
 
 
+def _is_ancestor(repo: Path, ref: str, of: str) -> bool:
+    return (
+        subprocess.run(
+            ["git", "-C", str(repo), "merge-base", "--is-ancestor", ref, of],
+            capture_output=True,
+        ).returncode
+        == 0
+    )
+
+
+def stacked_bases(repo: Path, defaults: list[str]) -> list[str]:
+    """Remote branches this branch is stacked on: their tip is in HEAD's
+    history but not yet in any default base. A PR stacked on another one
+    targets such a branch; branches already merged into a default base
+    (most old ones) are left out, so records stay few."""
+    try:
+        current = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+        refs = git(repo, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin")
+    except subprocess.CalledProcessError:
+        return []
+    skip = {*defaults, "origin", "origin/HEAD", f"origin/{current}"}
+    return [
+        ref
+        for ref in refs.splitlines()
+        if ref
+        and ref not in skip
+        and _is_ancestor(repo, ref, "HEAD")
+        and not any(_is_ancestor(repo, ref, base) for base in defaults)
+    ]
+
+
 def fingerprint(repo: Path, base: str) -> str | None:
     """Hash of the changed files' content relative to merge-base(base, HEAD);
     None when the base can't be resolved."""
@@ -71,10 +102,11 @@ def records_path(repo: Path) -> Path:
 
 def record(repo: Path, verdict: str, summary: str) -> list[str]:
     """Record a review of the repo's current state against each candidate
-    base; returns the bases recorded."""
+    base and each branch it's stacked on; returns the bases recorded."""
     done = []
+    defaults = candidate_bases(repo)
     with open(records_path(repo), "a") as out:
-        for base in candidate_bases(repo):
+        for base in [*defaults, *stacked_bases(repo, defaults)]:
             fp = fingerprint(repo, base)
             if fp:
                 row = {"time": time.time(), "base": base, "fingerprint": fp, "verdict": verdict}
