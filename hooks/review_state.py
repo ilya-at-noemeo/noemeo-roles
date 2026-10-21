@@ -48,35 +48,32 @@ def candidate_bases(repo: Path) -> list[str]:
     return list(dict.fromkeys(bases))
 
 
-def _is_ancestor(repo: Path, ref: str, of: str) -> bool:
-    return (
-        subprocess.run(
-            ["git", "-C", str(repo), "merge-base", "--is-ancestor", ref, of],
-            capture_output=True,
-        ).returncode
-        == 0
-    )
-
-
 def stacked_bases(repo: Path, defaults: list[str]) -> list[str]:
     """Remote branches this branch is stacked on: their tip is in HEAD's
     history but not yet in any default base. A PR stacked on another one
     targets such a branch; branches already merged into a default base
-    (most old ones) are left out, so records stay few."""
+    (most old ones) are left out, so records stay few. One git call,
+    however many branches. A base that has gained commits since HEAD was
+    branched from it isn't in HEAD's history: rebase onto it first."""
+    args = ["for-each-ref", "--format=%(refname)", "--merged", "HEAD"]
+    for base in defaults:
+        args += ["--no-merged", base]
     try:
-        current = git(repo, "rev-parse", "--abbrev-ref", "HEAD")
-        refs = git(repo, "for-each-ref", "--format=%(refname:short)", "refs/remotes/origin")
+        refs = git(repo, *args, "refs/remotes/origin/")
     except subprocess.CalledProcessError:
         return []
-    skip = {*defaults, "origin", "origin/HEAD", f"origin/{current}"}
-    return [
-        ref
-        for ref in refs.splitlines()
-        if ref
-        and ref not in skip
-        and _is_ancestor(repo, ref, "HEAD")
-        and not any(_is_ancestor(repo, ref, base) for base in defaults)
-    ]
+    skip = {*defaults, "origin/HEAD"}
+    for own in ("@{upstream}", "HEAD"):
+        try:
+            skip.add(git(repo, "rev-parse", "--abbrev-ref", own).removeprefix("remotes/"))
+        except subprocess.CalledProcessError:
+            pass
+    try:
+        skip.add(f"origin/{git(repo, 'symbolic-ref', '--short', 'HEAD')}")
+    except subprocess.CalledProcessError:
+        pass  # detached HEAD: no branch of its own
+    names = (ref.removeprefix("refs/remotes/") for ref in refs.splitlines() if ref)
+    return [name for name in names if name not in skip]
 
 
 def fingerprint(repo: Path, base: str) -> str | None:
@@ -106,13 +103,23 @@ def record(repo: Path, verdict: str, summary: str) -> list[str]:
     done = []
     defaults = candidate_bases(repo)
     with open(records_path(repo), "a") as out:
-        for base in [*defaults, *stacked_bases(repo, defaults)]:
-            fp = fingerprint(repo, base)
-            if fp:
-                row = {"time": time.time(), "base": base, "fingerprint": fp, "verdict": verdict}
-                out.write(json.dumps({**row, "summary": summary[:500]}) + "\n")
-                done.append(base)
+        # Default bases first, flushed: if the hook is cut short while
+        # finding stacked ones, those rows are already written.
+        for base in defaults:
+            done += _write(out, repo, base, verdict, summary)
+        out.flush()
+        for base in stacked_bases(repo, defaults):
+            done += _write(out, repo, base, verdict, summary)
     return done
+
+
+def _write(out, repo: Path, base: str, verdict: str, summary: str) -> list[str]:
+    fp = fingerprint(repo, base)
+    if not fp:
+        return []
+    row = {"time": time.time(), "base": base, "fingerprint": fp, "verdict": verdict}
+    out.write(json.dumps({**row, "summary": summary[:500]}) + "\n")
+    return [base]
 
 
 def latest(repo: Path, base: str) -> dict | None:

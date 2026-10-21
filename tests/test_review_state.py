@@ -100,6 +100,23 @@ class StackedBases(unittest.TestCase):
         self.assertNotIn("origin/old", bases)
         self.assertNotIn("origin/b", bases)
 
+    def test_a_detached_head_still_records_its_stacked_base(self):
+        git(self.repo, "checkout", "-q", "--detach")
+        bases = record(self.repo, "Ready", "ok")
+        self.assertIn("origin/a", bases)
+        self.assertNotIn("origin/old", bases)
+
+    def test_a_base_that_moved_on_says_to_rebase(self):
+        git(self.repo, "checkout", "-q", "a")
+        commit(self.repo, "a2")
+        git(self.repo, "push", "-q", "origin", "a")
+        git(self.repo, "checkout", "-q", "b")
+        self.assertNotIn("origin/a", record(self.repo, "Ready", "ok"))
+        self.assertIn("rebase onto it", self.gate("a"))
+        git(self.repo, "rebase", "-q", "origin/a")
+        record(self.repo, "Ready", "ok")
+        self.assertEqual(self.gate("a"), "")
+
 
 if __name__ == "__main__":
     unittest.main()
