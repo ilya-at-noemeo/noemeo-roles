@@ -205,7 +205,9 @@ def main() -> None:
         f"No noemeo-code-reviewer review matches the change in {repo} against {base} as it "
         "is now (none yet, or the code changed since). Run the noemeo-code-reviewer agent on "
         f"this branch against {base.removeprefix('origin/')}, naming the repo by its absolute "
-        "path; then open the PR. A verdict of Ready or Ready with nits lets it through."
+        "path; then open the PR. A verdict of Ready or Ready with nits lets it through. If "
+        f"{base} has gained commits since this branch was based on it, rebase onto it first: "
+        "a review is recorded only against bases already in the branch's history."
     )
 
 
