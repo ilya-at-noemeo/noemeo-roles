@@ -51,7 +51,9 @@ dispatch from a feature branch, a compromised Lambda).
 ## Step 4 (optional): Validate with AWS
 
 Only if the user explicitly agrees -- it uses their AWS credentials,
-although these calls are read-only and free:
+although these calls are read-only and free. Use a Noemeo profile from
+`~/.aws/config` (`--profile`), never the default credentials, and check
+the account with `aws sts get-caller-identity` first:
 
 - `aws accessanalyzer validate-policy --policy-type IDENTITY_POLICY
   --policy-document file://<rendered.json>` (or `RESOURCE_POLICY` for

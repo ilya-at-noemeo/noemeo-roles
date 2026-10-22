@@ -86,7 +86,7 @@ lifecycle event whatever the model decides.
 
 | Event | Hook | Does |
 | --- | --- | --- |
-| PreToolUse | `guard.py` | Denies `rm -rf`, force-pushes, `git clean -f`, and Bash or file-tool access to secrets: `.env`/`.env.*` (not `.env.example`), `*.pem`, `.certs/`, `.aws/credentials`. Commit messages and PR bodies that only mention them are allowed. |
+| PreToolUse | `guard.py` | Denies `rm -rf`, force-pushes, `git clean -f`, and Bash or file-tool access to secrets: `.env`/`.env.*` (not `.env.example`), `*.pem`, `.certs/`, `.aws/credentials`. Commit messages and PR bodies that only mention them are allowed. In a repo that lists its AWS profiles, also denies `aws`/`terraform` commands that don't use one. |
 | SessionStart | `session_context.sh` | Adds branch, uncommitted files, recent commits, open GitHub issues and the last failing test run to the session. |
 | PreToolUse | `review_gate.py` | Before `gh pr create` (or its alias `gh pr new`), denies unless `noemeo-code-reviewer`'s latest review of the change *as it is now* says Ready or Ready with nits; tells Claude to run the reviewer otherwise. Fails closed: a mention counts unless it sits wholly in a heredoc body or quoted string, the command runs no shell, interpreter or other runner (`sh -c`, `python`, `xargs`, `ssh`, `$VAR`, ...) and no `$(`/backtick comes before it -- so a commit message naming it passes, anything else is denied. |
 | SubagentStop | `review_record.py` | When `noemeo-code-reviewer` finishes, records its verdict against a fingerprint of the repo it names: the content of every file changed since the merge-base with the PR base, untracked files included. It records against the repo's default bases (`origin/HEAD`, `origin/dev`, `origin/main`) and any remote branch the branch is stacked on (in its history, not yet in a default base), so a PR targeting another open branch can pass the gate. A stacked base that has gained commits since isn't in the branch's history: rebase onto it, then review. Committing reviewed changes keeps the fingerprint; any further edit voids it. Records live in the repo's git directory (`noemeo-reviews.jsonl`), never in the tree. Its matcher is the regex `(^\|:)noemeo-code-reviewer$`: a plugin agent's type is scoped (`noemeo:noemeo-code-reviewer`), and a matcher of only letters and hyphens is compared exactly, so the plain name never fires. |
@@ -105,6 +105,24 @@ as literal names or `*.<ext>`:
 
 ```json
 { "secrets": [".my_tokens.json", "*.p12"] }
+```
+
+A repo that works against an AWS account names that account's profiles
+from `~/.aws/config` there too. The guard then denies an `aws` or
+`terraform` command that can reach AWS unless it uses one of them
+(`--profile`, an `AWS_PROFILE=` prefix, or `AWS_PROFILE` in the
+session), so nothing falls back to the default credentials, which on a
+developer's own machine may be another account. Pair it with
+`"env": {"AWS_PROFILE": "<profile>"}` in the repo's
+`.claude/settings.json`, so scripts and SDKs default to the right
+account too. That env is the real protection: the guard reads command
+text, so it can't see AWS calls made inside a script, `bash -c`, an
+`npm run` script or an SDK. A command that unsets or overrides
+`AWS_PROFILE` itself must name a listed profile on each `aws` or
+`terraform` it runs:
+
+```json
+{ "aws_profiles": ["acme-dev", "acme-admin"] }
 ```
 
 The guard reads command text, not intent, so it errs toward denying:
