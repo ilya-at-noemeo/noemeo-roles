@@ -116,9 +116,9 @@ def _aws_profiles() -> list[str]:
 
 AWS_PROFILES = _aws_profiles()
 TERRAFORM_OFFLINE = {
-    "", "fmt", "validate", "version", "help", "graph", "get", "providers",
+    "", "fmt", "validate", "version", "help", "get",
     "-version", "--version", "-help", "--help",
-}  # fmt: skip
+}  # fmt: skip  # fmt: skip
 # The command itself changes AWS_PROFILE: the session's value can't be
 # trusted for it, so each aws/terraform needs its own listed profile.
 PROFILE_CHANGED_RE = re.compile(
@@ -127,18 +127,9 @@ PROFILE_CHANGED_RE = re.compile(
 )
 # Wrappers whose own flags come before the command they run.
 WRAPPERS = {
-    "sudo",
-    "command",
-    "env",
-    "nohup",
-    "time",
-    "exec",
-    "xargs",
-    "then",
-    "do",
-    "else",
-    "!",
-}
+    "sudo", "command", "env", "nohup", "time", "exec", "xargs",
+    "if", "elif", "while", "until", "then", "do", "else", "!",
+}  # fmt: skip
 
 
 def check_aws_profile(
@@ -155,7 +146,12 @@ def check_aws_profile(
         return None
     if cmd == "terraform":
         sub = next((a for a in args if not a.startswith("-chdir")), "")
-        if sub in TERRAFORM_OFFLINE or (sub == "init" and "-backend=false" in args):
+        rest = args[args.index(sub) + 1 :] if sub in args else []
+        if (
+            sub in TERRAFORM_OFFLINE
+            or (sub == "init" and "-backend=false" in args)
+            or (sub == "providers" and rest[:1] in (["lock"], ["mirror"]))
+        ):
             return None
     named = []
     if cmd == "aws":  # terraform has no --profile flag
