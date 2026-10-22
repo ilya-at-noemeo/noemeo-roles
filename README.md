@@ -115,7 +115,11 @@ session), so nothing falls back to the default credentials, which on a
 developer's own machine may be another account. Pair it with
 `"env": {"AWS_PROFILE": "<profile>"}` in the repo's
 `.claude/settings.json`, so scripts and SDKs default to the right
-account too:
+account too. That env is the real protection: the guard reads command
+text, so it can't see AWS calls made inside a script, `bash -c`, an
+`npm run` script or an SDK. A command that unsets or overrides
+`AWS_PROFILE` itself must name a listed profile on each `aws` or
+`terraform` it runs:
 
 ```json
 { "aws_profiles": ["acme-dev", "acme-admin"] }
