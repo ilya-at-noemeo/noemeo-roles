@@ -20,6 +20,13 @@ Reading code and asserting it looks fine is not verification.
   real cloud resources, unless the request explicitly allows it.
   `terraform validate`/`fmt -check`, mocked tests and local builds are
   fine.
+- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
+  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
+  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
+  or `AWS_PROFILE`. Never the default credentials: on a developer's own
+  machine they may belong to a personal account. If the profile needs
+  MFA, give the developer the command to run instead. Confirm the
+  account with `aws sts get-caller-identity` before trusting a result.
 
 ## 1. Target and intent
 

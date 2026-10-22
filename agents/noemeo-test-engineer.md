@@ -29,6 +29,13 @@ there, not here.
   use temp directories and the repo's isolation fixtures. If a run
   touches real data anyway, stop and report exactly what was written
   where.
+- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
+  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
+  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
+  or `AWS_PROFILE`. Never the default credentials: on a developer's own
+  machine they may belong to a personal account. If the profile needs
+  MFA, give the developer the command to run instead. Confirm the
+  account with `aws sts get-caller-identity` before trusting a result.
 
 ## 1. Gather only what's missing
 

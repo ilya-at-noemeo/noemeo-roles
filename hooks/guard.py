@@ -14,6 +14,17 @@ the permission mode, in every repo the plugin is enabled in.
       {"secrets": [".my_tokens.json", "*.p12"]}
 
   (a literal file or directory name, or "*.<ext>").
+- AWS calls on the wrong account, where the repo opts in by naming its
+  AWS profiles in .claude/noemeo-guard.json:
+
+      {"aws_profiles": ["acme-dev", "acme-admin"]}
+
+  An `aws` or `terraform` command that can reach AWS must then use one
+  of them, via --profile, an AWS_PROFILE= prefix, or AWS_PROFILE in the
+  session's environment. Otherwise it would fall back to the default
+  credentials, which on a developer's own machine may be another
+  account entirely. Offline commands (`aws --version`, `terraform fmt`,
+  `validate`, `version`, `init -backend=false`) are allowed.
 
 Commit messages and PR bodies that only mention a secret's name are
 allowed. Ask the user to run a denied command themselves if it's really
@@ -40,11 +51,18 @@ PROSE_RE = re.compile(r"^\s*(git\s+commit|gh\s+(pr|issue)\s+(create|comment|edit
 CONTROL_RE = r"&&|\|\||[;|&\n]"
 
 
-def repo_secrets() -> list[str]:
+def repo_config() -> dict:
     config = Path(os.environ.get("CLAUDE_PROJECT_DIR", ".")) / ".claude" / "noemeo-guard.json"
     try:
-        names = json.loads(config.read_text()).get("secrets", [])
-    except (OSError, ValueError, AttributeError):
+        loaded = json.loads(config.read_text())
+    except (OSError, ValueError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def repo_secrets() -> list[str]:
+    names = repo_config().get("secrets", [])
+    if not isinstance(names, list):
         return []
     return [
         r"[\w.-]*\." + re.escape(n[2:]) if n.startswith("*.") else re.escape(n)
@@ -83,13 +101,46 @@ def short_flags(args: list[str]) -> set[str]:
     return flags
 
 
+AWS_PROFILES = [p for p in repo_config().get("aws_profiles") or [] if isinstance(p, str) and p]
+TERRAFORM_OFFLINE = {"fmt", "validate", "version", "-version", "--version", "-help", "--help"}
+
+
+def check_aws_profile(cmd: str, args: list[str], assigned: dict[str, str]) -> str | None:
+    if not AWS_PROFILES or cmd not in ("aws", "terraform"):
+        return None
+    if cmd == "aws" and (not args or args[0] in ("--version", "help")):
+        return None
+    if cmd == "terraform":
+        sub = next((a for a in args if not a.startswith("-chdir")), "")
+        if sub in TERRAFORM_OFFLINE or (sub == "init" and "-backend=false" in args):
+            return None
+    named = [args[i + 1] for i, a in enumerate(args[:-1]) if a == "--profile"]
+    named += [a.split("=", 1)[1] for a in args if a.startswith("--profile=")]
+    profile = named[-1] if named else assigned.get("AWS_PROFILE") or os.environ.get("AWS_PROFILE")
+    if profile in AWS_PROFILES:
+        return None
+    return (
+        f"{cmd} without one of this repo's AWS profiles ({', '.join(AWS_PROFILES)}) would use "
+        "the default credentials, which may be another account. Add --profile, or "
+        "AWS_PROFILE=<profile> before the command."
+    )
+
+
 def check_segment(words: list[str]) -> str | None:
     # Skip leading env assignments and common wrappers.
+    assigned: dict[str, str] = {}
     while words and (re.fullmatch(r"\w+=.*", words[0]) or words[0] in ("sudo", "command", "env")):
+        if "=" in words[0]:
+            key, value = words[0].split("=", 1)
+            assigned[key] = value
         words = words[1:]
     if not words:
         return None
     cmd, args = words[0].rsplit("/", 1)[-1], words[1:]
+
+    reason = check_aws_profile(cmd, args, assigned)
+    if reason:
+        return reason
 
     if cmd == "rm":
         flags = short_flags(args)

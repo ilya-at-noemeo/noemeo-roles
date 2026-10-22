@@ -11,6 +11,16 @@ repo); once you load the skill below, that file is at
 Read it first -- scope, judgment lens and foundation grounding live
 there, not here.
 
+## Hard limits
+
+- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
+  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
+  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
+  or `AWS_PROFILE`. Never the default credentials: on a developer's own
+  machine they may belong to a personal account. If the profile needs
+  MFA, give the developer the command to run instead. Confirm the
+  account with `aws sts get-caller-identity` before trusting a result.
+
 ## 1. Gather only what's missing
 
 Ask only for what's genuinely unknown and relevant:
