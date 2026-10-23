@@ -89,9 +89,14 @@ every branch.
 
 - Commit in logical pieces, ending each message with the attribution
   lines the session gives, and keep the repo's commit identity.
-- Write the PR body with the file tool, not a shell heredoc. The
-  guard reads command-like text in a heredoc, backticks included, as
-  commands.
+- Write the PR body with the file tool, **outside the repo** (the
+  session's scratchpad or a temp directory), and pass it with
+  `--body-file <path>`. A file inside the repo is untracked work: it
+  changes the reviewed fingerprint, and the gate denies the PR. Don't
+  put the body in an inline quoted `--body "..."` either: the guard
+  reads backticks and `$(` there as commands. It only skips a heredoc
+  that feeds `git commit` or `gh pr`; a heredoc feeding anything else,
+  `cat > file` included, is scanned.
 - The body covers:
   - what changed and why;
   - the evidence (measured numbers, test counts);
@@ -99,9 +104,10 @@ every branch.
   - anything the change needs to go live (deploy order, a plugin
     update, another repo's PR first);
   - a test plan, with what's left unchecked marked as such.
-- Push and open the PR in one command that **starts with `cd <repo>`**.
-  The gate checks the repo of the first `cd`, or else the session's
-  working directory.
+- Push and open the PR in one command that **starts with
+  `cd <repo> &&`**. The gate recognises only that leading form; with
+  anything else (`cd X;`, a variable assignment first, a later `cd`),
+  it checks the session's working directory instead.
 - Several repos: open the PR others depend on first, and say the order
   in each body.
 

@@ -272,6 +272,30 @@ class AgentUsage(unittest.TestCase):
         self.assertIsNone(outside["repo"])
         self.assertIsNone(nocwd["repo"])
 
+    def test_repo_comes_from_the_transcripts_last_cwd_first(self):
+        repo = self.root / "repo"
+        repo.mkdir()
+        subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+        plain = self.root / "plain"
+        plain.mkdir()
+        entry = assistant("2026-10-22T16:49:46.000Z", "m", [TEXT])
+        self.write_transcript([{**entry, "cwd": str(plain)}, {**entry, "cwd": str(repo)}])
+        self.run_hook(self.default_event(cwd=str(plain)))
+        self.assertEqual(Path(self.lines()[0]["repo"]).resolve(), repo.resolve())
+
+    def test_one_malformed_entry_doesnt_lose_the_line(self):
+        good = assistant("2026-10-22T16:49:46.000Z", "m", [tool_use(1)])
+        bad = [
+            {**good, "timestamp": 5},
+            {**good, "message": {**good["message"], "id": ["x"], "usage": "lots"}},
+        ]
+        self.write_transcript([*bad, good])
+        self.write_meta(self.sub / "agent-a1.jsonl", [])
+        self.run_hook(self.default_event())
+        (rec,) = self.lines()
+        self.assertEqual(rec["tool_calls"], 3)
+        self.assertIsNone(rec["description"])
+
 
 if __name__ == "__main__":
     unittest.main()

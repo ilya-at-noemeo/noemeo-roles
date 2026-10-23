@@ -4,16 +4,18 @@ stop, appended to ~/.claude/noemeo-agent-usage.jsonl (or the path in
 NOEMEO_AGENT_USAGE_LOG). Never blocks.
 
 Each line: time, session, agent id and type, the task description it
-was given, the repo it worked in, its model(s), input token counts
+was given, the repo it worked in (its transcript's last working
+directory, else the event's), its model(s), input token counts
 (input, cache writes, cache reads), the characters it wrote, tool
 calls, and the span from its first to its last transcript entry. All of
 it is read from the subagent's own transcript
 (<session>/subagents/agent-<id>.jsonl) and the .meta.json beside it.
 
-Output tokens aren't logged: the transcript stores each streamed
+Output tokens aren't logged: the transcript usually stores a streamed
 message's usage as it was when the stream started, when the input and
 cache counts are final but output has barely begun (a few tokens for a
-10,000-character file write). `output_chars` -- the length of the text,
+10,000-character file write); only some entries carry final counts, so
+a sum would mislead. `output_chars` -- the length of the text,
 thinking and tool-call input the agent wrote -- is measured instead; it
 is a size, not a token count.
 
@@ -52,41 +54,45 @@ def transcript_path(event: dict) -> Path | None:
 
 
 def usage(path: Path) -> dict:
-    """Totals over the transcript. An API message can span several
-    entries (one per content block) carrying the same usage, so each
-    message id counts once."""
+    """Totals over the transcript, read line by line. An API message can
+    span several entries (one per content block) carrying the same usage,
+    so each message id counts once. A malformed entry is skipped, not
+    allowed to lose the whole line."""
     tokens = dict.fromkeys(TOKEN_FIELDS, 0)
     models, seen, tool_calls, output_chars, times = set(), set(), 0, 0, []
-    for line in path.read_text().splitlines():
-        try:
-            entry = json.loads(line)
-        except json.JSONDecodeError:
-            continue
-        if not isinstance(entry, dict):
-            continue
-        if entry.get("timestamp"):
-            times.append(entry["timestamp"])
-        message = entry.get("message")
-        if entry.get("type") != "assistant" or not isinstance(message, dict):
-            continue
-        content = message.get("content")
-        if isinstance(content, list):
-            blocks = [b for b in content if isinstance(b, dict)]
-            tool_calls += sum(b.get("type") == "tool_use" for b in blocks)
-            output_chars += sum(written_chars(b) for b in blocks)
-        key = message.get("id") or entry.get("uuid")
-        if key in seen:
-            continue
-        seen.add(key)
-        if message.get("model"):
-            models.add(message["model"])
-        for field in TOKEN_FIELDS:
-            tokens[field] += int((message.get("usage") or {}).get(field) or 0)
-    seconds = None
-    if len(times) >= 2:
-        first, last = (datetime.fromisoformat(t.replace("Z", "+00:00")) for t in (min(times), max(times)))
-        seconds = round((last - first).total_seconds())
+    cwd = None
+    with path.open(errors="replace") as lines:
+        for line in lines:
+            try:
+                entry = json.loads(line)
+                if not isinstance(entry, dict):
+                    continue
+                if isinstance(entry.get("timestamp"), str):
+                    times.append(datetime.fromisoformat(entry["timestamp"].replace("Z", "+00:00")))
+                if isinstance(entry.get("cwd"), str):
+                    cwd = entry["cwd"]
+                message = entry.get("message")
+                if entry.get("type") != "assistant" or not isinstance(message, dict):
+                    continue
+                content = message.get("content")
+                if isinstance(content, list):
+                    blocks = [b for b in content if isinstance(b, dict)]
+                    tool_calls += sum(b.get("type") == "tool_use" for b in blocks)
+                    output_chars += sum(written_chars(b) for b in blocks)
+                key = str(message.get("id") or entry.get("uuid"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                if isinstance(message.get("model"), str):
+                    models.add(message["model"])
+                counts = message.get("usage") if isinstance(message.get("usage"), dict) else {}
+                for field in TOKEN_FIELDS:
+                    tokens[field] += int(counts.get(field) or 0)
+            except (ValueError, TypeError, AttributeError):
+                continue
+    seconds = round((max(times) - min(times)).total_seconds()) if len(times) >= 2 else None
     return {
+        "cwd": cwd,
         "models": sorted(models),
         "tokens": tokens,
         "output_chars": output_chars,
@@ -119,16 +125,18 @@ def main() -> None:
             meta = json.loads(path.with_suffix(".meta.json").read_text())
         except (OSError, ValueError):
             meta = {}
+        if not isinstance(meta, dict):
+            meta = {}
     record = {
         "time": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "session_id": event.get("session_id"),
         "agent_id": event.get("agent_id"),
         "agent_type": event.get("agent_type") or meta.get("agentType"),
         "description": meta.get("description"),
-        "repo": repo_of(event.get("cwd")),
     }
-    if path is not None and path.is_file():
-        record.update(usage(path))
+    totals = usage(path) if path is not None and path.is_file() else {}
+    record["repo"] = repo_of(totals.pop("cwd", None) or event.get("cwd"))
+    record.update(totals)
     log = Path(os.environ.get("NOEMEO_AGENT_USAGE_LOG") or DEFAULT_LOG)
     log.parent.mkdir(parents=True, exist_ok=True)
     with log.open("a") as f:
