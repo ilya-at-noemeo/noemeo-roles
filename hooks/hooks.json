@@ -1,5 +1,5 @@
 {
-  "description": "Noemeo guard rails for every repo: deny destructive commands and secret access; repo state at session start; a PR only after noemeo-code-reviewer has reviewed the change as it is; in repos that opt in, ruff on each edited Python file and pytest before a turn can end.",
+  "description": "Noemeo guard rails for every repo: deny destructive commands and secret access; repo state at session start; a PR only after noemeo-code-reviewer has reviewed the change as it is; each subagent's usage logged; in repos that opt in, ruff on each edited Python file and pytest before a turn can end.",
   "hooks": {
     "SessionStart": [
       {
@@ -66,6 +66,15 @@
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/review_record.py",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/agent_usage.py",
+            "timeout": 15
           }
         ]
       }
