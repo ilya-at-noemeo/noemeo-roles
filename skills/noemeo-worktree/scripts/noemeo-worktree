@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+# Parallel checkouts of a Noemeo repo that are ready to work in: the
+# plugin's ruff and test hooks only run where .venv exists, so a bare
+# `git worktree add` gives Claude a checkout with no lint and no tests.
+#
+#   noemeo-worktree add <branch> [<base>]  new worktree; <base> defaults
+#                                          to origin/HEAD, freshly fetched
+#   noemeo-worktree remove <branch>        remove it (refuses if it has
+#                                          changes) and delete the branch
+#                                          if it's merged
+#   noemeo-worktree list
+#
+# Run from anywhere inside the repo. Worktrees live in
+# $NOEMEO_WORKTREES_DIR/<repo>/<branch>, by default a .worktrees/
+# directory beside the main checkout -- outside every repo, because
+# Claude Code loads each CLAUDE.md above the working directory: a
+# worktree nested in the main checkout would get main's CLAUDE.md on top
+# of its own branch's. `add` copies .env/.env.* (not .env.example) from
+# the main checkout and installs dependencies (poetry.lock: poetry
+# install; uv.lock: uv sync).
+set -euo pipefail
+
+die() { echo "noemeo-worktree: $*" >&2; exit 1; }
+
+common=$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null) ||
+  die "not inside a git repo"
+main=$(dirname "$common")
+repo=$(basename "$main")
+base_dir="${NOEMEO_WORKTREES_DIR:-$(dirname "$main")/.worktrees}/$repo"
+
+# Branch names map to paths one to one: a/b is a subdirectory, a-b isn't.
+path_for() { echo "$base_dir/$1"; }
+
+install_deps() {
+  if [ -f poetry.lock ]; then
+    command -v poetry >/dev/null || { echo "!! poetry not found; run 'poetry install' yourself"; return; }
+    # In-project, so the hooks find .venv, without writing a poetry.toml
+    # into the tree of a repo that doesn't have one.
+    POETRY_VIRTUALENVS_IN_PROJECT=true poetry install --quiet
+  elif [ -f uv.lock ]; then
+    command -v uv >/dev/null || { echo "!! uv not found; run 'uv sync' yourself"; return; }
+    uv sync --quiet
+  elif [ -f pyproject.toml ]; then
+    echo "!! pyproject.toml but no poetry.lock or uv.lock: install dependencies into .venv yourself"
+  fi
+  if [ -f pyproject.toml ] && [ ! -x .venv/bin/pytest ]; then
+    echo "!! no .venv/bin/pytest after install: the plugin's ruff and test hooks won't run here"
+  fi
+}
+
+cmd_add() {
+  local branch="${1:-}" base="${2:-}"
+  [ -n "$branch" ] || die "usage: noemeo-worktree add <branch> [<base>]"
+  local path
+  path=$(path_for "$branch")
+  [ -e "$path" ] && die "$path already exists"
+
+  git -C "$main" fetch --quiet origin || echo "!! fetch failed; using local refs"
+  if git -C "$main" show-ref --verify --quiet "refs/heads/$branch"; then
+    git -C "$main" worktree add "$path" "$branch"
+  elif [ -z "$base" ] && git -C "$main" show-ref --verify --quiet "refs/remotes/origin/$branch"; then
+    # Someone's pushed branch: continue it rather than start a namesake.
+    git -C "$main" worktree add --track -b "$branch" "$path" "origin/$branch"
+  else
+    if [ -z "$base" ]; then
+      base=$(git -C "$main" symbolic-ref --quiet --short refs/remotes/origin/HEAD) ||
+        die "no origin/HEAD; name a base: noemeo-worktree add $branch <base>"
+    fi
+    git -C "$main" worktree add --no-track -b "$branch" "$path" "$base"
+  fi
+
+  cd "$path"
+  for f in "$main"/.env "$main"/.env.*; do
+    [ -f "$f" ] || continue
+    case "$f" in *.example) continue ;; esac
+    cp -p "$f" .
+  done
+  install_deps
+  echo "Ready: $path"
+}
+
+cmd_remove() {
+  local branch="${1:-}"
+  [ -n "$branch" ] || die "usage: noemeo-worktree remove <branch>"
+  local path
+  path=$(path_for "$branch")
+  [ -d "$path" ] || die "no worktree at $path"
+  [ "$(git -C "$path" branch --show-current 2>/dev/null)" = "$branch" ] ||
+    die "$path is not on branch $branch; not removing it"
+  # Set aside the env files `add` copied, if still unchanged, so they
+  # don't block removal in a repo that doesn't ignore them -- and put
+  # them back if git refuses for another reason.
+  local aside f
+  aside=$(mktemp -d)
+  for f in "$main"/.env "$main"/.env.*; do
+    [ -f "$f" ] || continue
+    case "$f" in *.example) continue ;; esac
+    if cmp -s "$f" "$path/$(basename "$f")"; then mv "$path/$(basename "$f")" "$aside/"; fi
+  done
+  # Without --force, git refuses if there are modified or untracked
+  # files; ignored ones (.venv, .env) go with the worktree.
+  if ! git -C "$main" worktree remove "$path"; then
+    for f in "$aside"/.[!.]* "$aside"/*; do
+      if [ -e "$f" ]; then mv "$f" "$path/"; fi
+    done
+    rmdir "$aside"
+    exit 1
+  fi
+  rm -r "$aside"
+  if git -C "$main" branch -d "$branch" 2>/dev/null; then
+    echo "Removed $path and merged branch $branch"
+  else
+    echo "Removed $path; kept branch $branch (not merged into HEAD -- if it was"
+    echo "squash-merged on GitHub, delete it with: git branch -D $branch)"
+  fi
+}
+
+case "${1:-}" in
+  add) shift; cmd_add "$@" ;;
+  remove) shift; cmd_remove "$@" ;;
+  list) git -C "$main" worktree list ;;
+  *) die "usage: noemeo-worktree add <branch> [<base>] | remove <branch> | list" ;;
+esac
