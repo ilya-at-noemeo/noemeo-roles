@@ -61,8 +61,8 @@ example.
 ## Hands off to / receives from
 
 **Receives from:** product vision (who it's for and what they need to
-do) and AI engineering (what the model produces, with what
-uncertainty).
+do), product management (a feature's requirements) and AI engineering
+(what the model produces, with what uncertainty).
 
 **Hands off to:** implementation (specs, states and example snippets),
 testing (accessibility and usability checks to verify), and back to
