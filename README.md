@@ -25,9 +25,9 @@ Shared across every Noemeo repo, two things live here:
   packaged as a Claude Code plugin (`noemeo`), e.g.
   `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
 - **`product/`, `engineering/`, `research/`** -- role definitions (product
-  vision, UX design, architecture, AI engineering, implementation,
-  testing, research): scope, judgment and boundaries for a kind of work,
-  usable by a human or any LLM.
+  vision, product management, UX design, architecture, AI engineering,
+  implementation, testing, research): scope, judgment and boundaries for
+  a kind of work, usable by a human or any LLM.
 
 This repo is **generic**: nothing here names or links a product or
 product-specific repo. Product-specific rules live in
@@ -61,6 +61,7 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: measured baseline, provider-aware structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
 | `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
+| `noemeo-product-management` | skill | Planning and tracking: sweeping loose commitments into a GitHub-issue backlog, milestones with exit criteria, feature requirements, priority proposals and status -- the owner decides |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-backend-architecture` | skill | Designing or reviewing backend systems: data ownership and custody, boundaries, contract-first APIs, failure modes, schemas, security, observability and cost sized to real need |
 | `noemeo-research` | skill | Studies of model-backed features: falsifiable claims, prior work, public benchmarks and their terms, controlled runs with validated graders, research notes and publication packages |
@@ -70,6 +71,7 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results -- prompt design, optimization and hardening on a fixed model included (loads `noemeo-prompt-engineering`) |
 | `noemeo-backend-architect` | agent | Delegated backend design work in its own context (architecture role): a design doc and its rationale, never product code |
 | `noemeo-ux-designer` | agent | Independent UI/UX review in its own context (UX design role). Read-only. |
+| `noemeo-product-manager` | agent | Delegated planning work in its own context (product management role): backlog sweeps, milestone readiness, requirements, priority proposals. Never writes to the tracker: returns `gh` commands for the main session to run; never code, never publishes. |
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 | `noemeo-researcher` | agent | Delegated research in its own context (research role): study plans, runs within an approved budget, write-ups and publication packages. Never changes product code to make a result happen; never submits externally. |
 | `noemeo-test-engineer` | agent | Building and maintaining test suites in its own context (testing role, building side): unit, integration, browser and host-SDK tests, each shown to fail. Writes tests only, never product code. |
@@ -83,9 +85,11 @@ definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
 `noemeo-ai-engineer` fills `engineering/ai-engineering.md`,
 `noemeo-backend-architect` fills `engineering/architecture.md`,
 `noemeo-researcher` fills `research/research.md`,
-`noemeo-ux-designer` fills `product/ux-design.md`): it loads the
-role and the skills rather than restating them. `noemeo-test-engineer`
-fills the same testing role as `noemeo-code-reviewer`, from the
+`noemeo-ux-designer` fills `product/ux-design.md`,
+`noemeo-product-manager` fills `product/product-management.md`): it
+loads the role and the skills rather than restating them.
+`noemeo-test-engineer` fills the same testing role as
+`noemeo-code-reviewer`, from the
 building side: one writes the tests, the other checks the change
 independently. Agents run on the session's model unless their frontmatter sets
 `model:` -- `noemeo-test-engineer` and `noemeo-ux-designer` use Sonnet.
@@ -171,13 +175,14 @@ hooks with `/hooks`.
 
 ```text
 product/
-  vision.md          -- product vision & positioning
-  ux-design.md       -- flows, visual design, accessibility, AI-output presentation
+  vision.md             -- product vision & positioning
+  product-management.md -- backlog, milestones, requirements, priorities
+  ux-design.md          -- flows, visual design, accessibility, AI-output presentation
 engineering/
-  architecture.md    -- system design, boundaries, schemas, tech choices
-  ai-engineering.md  -- model-backed components: LLMs, prompts, evals, ML
-  implementation.md  -- writing code against an agreed architecture
-  testing.md         -- verification, edge cases, adversarial review, test suites
+  architecture.md       -- system design, boundaries, schemas, tech choices
+  ai-engineering.md     -- model-backed components: LLMs, prompts, evals, ML
+  implementation.md     -- writing code against an agreed architecture
+  testing.md            -- verification, edge cases, adversarial review, test suites
 ```
 
 Each follows the same shape: **Scope**, **Out of scope**, **Judgment

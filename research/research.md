@@ -76,8 +76,9 @@ again.
 
 ## Hands off to / receives from
 
-**Receives from:** product vision and AI engineering (the question, the
-change to measure), the product owner (budget, labels, approval).
+**Receives from:** product vision, product management and AI engineering
+(the question, the change to measure), the product owner (budget,
+labels, approval).
 
 **Hands off to:** AI engineering (what the evidence says to change or
 drop), the product owner (results and a recommendation; publication

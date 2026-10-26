@@ -68,10 +68,11 @@ architecture has decided a model belongs there), and the testing role
 (what needs verification and why).
 
 **Receives from:** the product vision role (what needs to be built and
-why). When picking up an existing product, read that product's own
-`CLAUDE.md` and `docs/architecture.md` in full before proposing
-changes -- it's written to be a working reference,
-not just a record of past discussion.
+why) and product management (a feature's requirements and the questions
+architecture must answer). When picking up an existing product, read
+that product's own `CLAUDE.md` and `docs/architecture.md` in full before
+proposing changes -- it's written to be a working reference, not just a
+record of past discussion.
 
 ## Before starting: decisions and open items
 

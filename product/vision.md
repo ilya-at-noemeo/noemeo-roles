@@ -59,9 +59,10 @@ at the start of a thread.
 
 ## Hands off to / receives from
 
-**Hands off to:** the architecture role, once positioning and product
-requirements are clear enough to ask "what needs to be true technically
-for this to work."
+**Hands off to:** product management, to sequence the work and write a
+feature's requirements, and through it to the architecture role, once
+those requirements are clear enough to ask "what needs to be true
+technically for this to work."
 
 **Receives from:** no upstream role within this repo -- product vision
 originates from direct founder input, user feedback, and market signal,
