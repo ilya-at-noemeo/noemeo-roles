@@ -1,7 +1,25 @@
 # noemeo-roles
 
-How Noemeo work gets done, shared across every Noemeo repo. Two
-things live here:
+**In short:** how an AI-first software company makes AI-written work
+trustworthy. Each kind of work has a written role with its scope,
+boundaries and judgment, and Claude Code skills and agents carry those
+roles out:
+
+- **Independent review as a gate.** With the plugin enabled, Claude
+  can't open a pull request until a separate reviewer, which doesn't
+  share the author's reasoning, approves the change exactly as it
+  stands. Any later edit voids the approval. A hook enforces this.
+- **Tests that prove they can fail.** The test engineer writes tests
+  only, and must show each one going red when the behaviour it pins
+  is broken.
+- **Guardrails in code, not in prompts.** Hooks deny destructive git
+  and file commands and access to secrets. In repos that opt in, they
+  also require a named AWS profile, fix lint on every Python edit and
+  keep a turn from ending while tests fail.
+- **Measured, not assumed.** Prompt and model work starts from a
+  measured baseline and reports before-and-after evidence.
+
+Shared across every Noemeo repo, two things live here:
 
 - **`skills/`, `agents/`** -- reusable procedures and a few agents,
   packaged as a Claude Code plugin (`noemeo`), e.g.
