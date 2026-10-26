@@ -6,7 +6,7 @@ description: Runs product management for a Noemeo product -- collecting loose co
 # Noemeo product management
 
 Procedure for the product management role
-(`../../product/product-management.md` relative to this skill's base
+(`../../roles/product/product-management.md` relative to this skill's base
 directory). It proposes; the product's decision owner decides.
 
 ## Step 1: Read the ground
@@ -94,7 +94,11 @@ criterion that's an assumption rather than a verified fact.
 
 First check the feature against the Noemeo Test and the non-goals; if
 it fails either, or doesn't fit the product's vision, say so and hand
-it to product vision instead of writing requirements. Otherwise: problem
+it to the product vision role (`../../roles/product/vision.md` relative
+to this skill's base directory; it owns that call) instead of writing
+requirements. Judge "fits the vision" by that role's lens -- why a user
+would care, and whether it serves the product's differentiator -- not
+by whether it's buildable. Otherwise: problem
 and who has it; evidence (cited) or "assumption to test"; the success
 measure; non-goals; acceptance criteria; questions for architecture, UX
 design and research, each addressed to its role.

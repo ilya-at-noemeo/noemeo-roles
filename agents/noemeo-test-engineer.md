@@ -6,9 +6,9 @@ model: sonnet
 ---
 
 You are filling the **building side of Noemeo's testing role**. Its
-definition is `engineering/testing.md` in the noemeo plugin root (the
+definition is `roles/engineering/testing.md` in the noemeo plugin root (the
 noemeo-roles repo); once you load the skill below, that file is at
-`../../engineering/testing.md` relative to the skill's base directory.
+`../../roles/engineering/testing.md` relative to the skill's base directory.
 Read it first -- scope, judgment lens and foundation grounding live
 there, not here.
 

@@ -19,15 +19,38 @@ roles out:
 - **Measured, not assumed.** Prompt and model work starts from a
   measured baseline and reports before-and-after evidence.
 
-Shared across every Noemeo repo, two things live here:
+## Why roles
 
-- **`skills/`, `agents/`** -- reusable procedures and a few agents,
-  packaged as a Claude Code plugin (`noemeo`), e.g.
-  `noemeo-design-review`, `noemeo-ai-engineer`, `noemeo-code-reviewer`.
-- **`product/`, `engineering/`, `research/`** -- role definitions (product
-  vision, product management, UX design, architecture, AI engineering,
-  implementation, testing, research): scope, judgment and boundaries for
-  a kind of work, usable by a human or any LLM.
+Claude Code supplies the machinery -- subagents, skills, hooks -- but
+not the judgment: what good work looks like here, who may do what, and
+where one kind of work hands off to the next. A role writes that down
+for one kind of work (scope, out of scope, judgment, handoffs), in plain
+Markdown any person or model can follow. Skills and agents carry roles
+out; hooks enforce the parts that mustn't depend on the model.
+
+Separate roles are what make independent review possible: the author
+never grades its own work, the test engineer never edits product code,
+the reviewer reports but never fixes. Without them, one generalist agent
+writes, tests and approves its own change, on generic defaults rather
+than Noemeo's. And because a role is plain text, it outlives the tool:
+when Claude Code changes, or a person takes on the work, the role stays
+and only the wiring changes.
+
+A role that nothing loads is just documentation, so a test checks that
+every file in `roles/` is read by at least one skill or agent.
+
+## What's here
+
+Three kinds of content, for three readers:
+
+| Kind | What it is | Read by | Where |
+| --- | --- | --- | --- |
+| **Roles** | Normative: scope, boundaries, judgment, handoffs | Agents, and people doing that work | `roles/` |
+| **Plugin** | How Claude Code carries the roles out and enforces them | Claude Code | `skills/`, `agents/`, `hooks/` (tested in `tests/`) |
+| **Documentation** | How the system works and how to use it | People | `README.md`, `docs/` |
+
+Role files hold rules only, because agents load them into context;
+explanation goes in `docs/`, where no agent pays for it.
 
 This repo is **generic**: nothing here names or links a product or
 product-specific repo. Product-specific rules live in
@@ -37,22 +60,35 @@ Everything is grounded in `noemeo-foundation` (private) -- the
 company-wide mission, principles and ethics. Anything here that
 contradicts the foundation is wrong, not the foundation.
 
-## Skills and agents (Claude Code plugin)
+## Roles
 
-The repo root is a Claude Code plugin marketplace with one plugin,
-`noemeo`: skills in `skills/`, agents in `agents/`. Install once, at user scope,
-and the skills are available in every repo:
-
-```bash
-claude plugin marketplace add ~/workspace/noemeo/noemeo-roles
-claude plugin install noemeo@noemeo-roles --scope user
+```text
+roles/
+  product/
+    vision.md             -- product vision & positioning
+    product-management.md -- backlog, milestones, requirements, priorities
+    ux-design.md          -- flows, visual design, accessibility, AI-output presentation
+  engineering/
+    architecture.md       -- system design, boundaries, schemas, tech choices
+    ai-engineering.md     -- model-backed components: LLMs, prompts, evals, ML
+    implementation.md     -- writing code against an agreed architecture
+    testing.md            -- verification, edge cases, adversarial review, test suites
+  research/
+    research.md           -- studies, benchmarks, controlled experiments, write-ups
 ```
 
-(`/plugin ...` in the terminal CLI does the same; the IDE extension
-doesn't have `/plugin`.) After editing a skill or agent, run
-`claude plugin update noemeo@noemeo-roles` and start a new session --
-the plugin is installed as a copy, not a live link. Validate manifests with
-`claude plugin validate .`.
+Each follows the same shape: **Scope**, **Out of scope**, **Judgment
+lens**, **Grounded in** (how `noemeo-foundation` binds it), and **Hands
+off to / receives from**. They're most useful as a lens to ask for
+("review this as the testing role would"), and as onboarding text for a
+person taking on that kind of work. New roles only when there's a real
+need.
+
+## Skills and agents (Claude Code plugin)
+
+One plugin, `noemeo`, installed once at user scope so it works in every
+repo. Install, update and how agents adapt roles:
+[docs/plugin.md](docs/plugin.md).
 
 | Name | Kind | Use it for |
 | --- | --- | --- |
@@ -76,121 +112,23 @@ the plugin is installed as a copy, not a live link. Validate manifests with
 | `noemeo-researcher` | agent | Delegated research in its own context (research role): study plans, runs within an approved budget, write-ups and publication packages. Never changes product code to make a result happen; never submits externally. |
 | `noemeo-test-engineer` | agent | Building and maintaining test suites in its own context (testing role, building side): unit, integration, browser and host-SDK tests, each shown to fail. Writes tests only, never product code. |
 
-Skills use the open `SKILL.md` format (name + description frontmatter,
-plain Markdown body), readable by people and by other agent tools.
-**Agents only when a separate context is the point** -- a reviewer that
-must not share the author's reasoning, or a self-contained piece of a
-role's work worth delegating. Each is a thin adapter for a role
-definition here (`noemeo-code-reviewer` fills `engineering/testing.md`,
-`noemeo-ai-engineer` fills `engineering/ai-engineering.md`,
-`noemeo-backend-architect` fills `engineering/architecture.md`,
-`noemeo-researcher` fills `research/research.md`,
-`noemeo-ux-designer` fills `product/ux-design.md`,
-`noemeo-product-manager` fills `product/product-management.md`): it
-loads the role and the skills rather than restating them.
-`noemeo-test-engineer` fills the same testing role as
-`noemeo-code-reviewer`, from the
-building side: one writes the tests, the other checks the change
-independently. Agents run on the session's model unless their frontmatter sets
-`model:` -- `noemeo-test-engineer` and `noemeo-ux-designer` use Sonnet.
-Keep role definitions
-provider-neutral, and adapt third-party agent templates this way instead
-of installing them as-is (they reference agents and stacks that don't
-exist here).
-
-For general bug-hunting, security and cleanup, use Claude Code's
-built-ins rather than duplicating them: `/code-review`,
-`/security-review`, `/simplify`.
-
 ## Hooks (Claude Code plugin)
 
-The same plugin ships hooks (`hooks/hooks.json`), so they run in every
-repo it's enabled in. Guarantees, not suggestions: each runs on its
-lifecycle event whatever the model decides.
+Guarantees, not suggestions: each runs on its lifecycle event whatever
+the model decides.
 
-| Event | Hook | Does |
-| --- | --- | --- |
-| PreToolUse | `guard.py` | Denies `rm -rf`, force-pushes, `git clean -f`, and Bash or file-tool access to secrets: `.env`/`.env.*` (not `.env.example`), `*.pem`, `.certs/`, `.aws/credentials`. Commit messages and PR bodies that only mention them are allowed. In a repo that lists its AWS profiles, also denies `aws`/`terraform` commands that don't use one. |
-| SessionStart | `session_context.sh` | Adds branch, uncommitted files, recent commits, open GitHub issues and the last failing test run to the session. |
-| PreToolUse | `review_gate.py` | Before `gh pr create` (or its alias `gh pr new`), denies unless `noemeo-code-reviewer`'s latest review of the change *as it is now* says Ready or Ready with nits; tells Claude to run the reviewer otherwise. Fails closed: a mention counts unless it sits wholly in a heredoc body or quoted string, the command runs no shell, interpreter or other runner (`sh -c`, `python`, `xargs`, `ssh`, `$VAR`, ...) and no `$(`/backtick comes before it -- so a commit message naming it passes, anything else is denied. |
-| SubagentStop | `review_record.py` | When `noemeo-code-reviewer` finishes, records its verdict against a fingerprint of the repo it names: the content of every file changed since the merge-base with the PR base, untracked files included. It records against the repo's default bases (`origin/HEAD`, `origin/dev`, `origin/main`) and any remote branch the branch is stacked on (in its history, not yet in a default base), so a PR targeting another open branch can pass the gate. A stacked base that has gained commits since isn't in the branch's history: rebase onto it, then review. Committing reviewed changes keeps the fingerprint; any further edit voids it. Records live in the repo's git directory (`noemeo-reviews.jsonl`), never in the tree. Its matcher is the regex `(^\|:)noemeo-code-reviewer$`: a plugin agent's type is scoped (`noemeo:noemeo-code-reviewer`), and a matcher of only letters and hyphens is compared exactly, so the plain name never fires. |
-| PostToolUse | `ruff_touched_file.sh` | `ruff check --fix` then `ruff format` on each edited `.py` file; unfixable lint goes back to Claude. |
-| Stop | `stop_tests.py` | `pytest -x -q` plus the repo's `stop_pytest_args`; a failure blocks the turn from ending and is handed back. Skipped when the tree is unchanged since the last green run. |
-| SubagentStop | `agent_usage.py` | For every subagent, appends one JSON line to `~/.claude/noemeo-agent-usage.jsonl` (or `$NOEMEO_AGENT_USAGE_LOG`): agent type and task, repo, model, input and cache tokens, characters written, tool calls and duration, read from the subagent's own transcript. Output tokens aren't logged: the transcript usually keeps a streamed message's usage from the start of the stream, so its output counts are mostly near zero. A resumed agent logs its running total, so the last line per agent id is its total. Never blocks. |
+- **Guard** (PreToolUse): denies destructive commands and access to
+  secrets; optionally requires a named AWS profile.
+- **Review gate** (PreToolUse + SubagentStop): no `gh pr create` until
+  `noemeo-code-reviewer` has approved the change as it is now.
+- **Session context** (SessionStart): branch, uncommitted files, recent
+  commits, open issues, last failing test run.
+- **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
+  that opt in.
+- **Agent usage log** (SubagentStop): one JSON line per subagent run.
 
-A repo opts in to the last two by having what they need, nothing else:
-
-- **ruff:** a `[tool.ruff]` table in its `pyproject.toml` and ruff in its
-  `.venv` (a dev dependency). Without both, edits aren't touched -- so
-  adopting it is a deliberate one-time format commit, not drift.
-- **tests:** pytest in its `.venv`.
-
-A linked worktree without the tool in its `.venv` while its main
-checkout has it (a fresh, uninstalled worktree) gets a one-line warning
-once per session rather than a silent skip; `noemeo-worktree` makes
-worktrees with their dependencies installed.
-
-A repo can add pytest arguments for the Stop hook in
-`.claude/noemeo-guard.json`, e.g. to leave slow browser tests to review
-and CI:
-
-```json
-{ "stop_pytest_args": ["-m", "not browser"] }
-```
-
-A repo with secrets of its own lists them in `.claude/noemeo-guard.json`,
-as literal names or `*.<ext>`:
-
-```json
-{ "secrets": [".my_tokens.json", "*.p12"] }
-```
-
-A repo that works against an AWS account names that account's profiles
-from `~/.aws/config` there too. The guard then denies an `aws` or
-`terraform` command that can reach AWS unless it uses one of them
-(`--profile`, an `AWS_PROFILE=` prefix, or `AWS_PROFILE` in the
-session), so nothing falls back to the default credentials, which on a
-developer's own machine may be another account. Pair it with
-`"env": {"AWS_PROFILE": "<profile>"}` in the repo's
-`.claude/settings.json`, so scripts and SDKs default to the right
-account too. That env is the real protection: the guard reads command
-text, so it can't see AWS calls made inside a script, `bash -c`, an
-`npm run` script or an SDK. A command that unsets or overrides
-`AWS_PROFILE` itself must name a listed profile on each `aws` or
-`terraform` it runs:
-
-```json
-{ "aws_profiles": ["acme-dev", "acme-admin"] }
-```
-
-The guard reads command text, not intent, so it errs toward denying:
-a heredoc that feeds a script and merely *mentions* a blocked command
-or secret is denied too. Write such text with the file tools instead.
-
-Tool-specific hooks for other stacks (`terraform fmt`, say) get added
-here once a repo actually needs one. Review or disable
-hooks with `/hooks`.
-
-## Role definitions
-
-```text
-product/
-  vision.md             -- product vision & positioning
-  product-management.md -- backlog, milestones, requirements, priorities
-  ux-design.md          -- flows, visual design, accessibility, AI-output presentation
-engineering/
-  architecture.md       -- system design, boundaries, schemas, tech choices
-  ai-engineering.md     -- model-backed components: LLMs, prompts, evals, ML
-  implementation.md     -- writing code against an agreed architecture
-  testing.md            -- verification, edge cases, adversarial review, test suites
-```
-
-Each follows the same shape: **Scope**, **Out of scope**, **Judgment
-lens**, **Grounded in** (how `noemeo-foundation` binds it), and **Hands
-off to / receives from**. They're most useful as a lens to ask for
-("review this as the testing role would"), and as onboarding text for a
-person taking on that kind of work. New roles only when there's a real
-need.
+Details, per-repo configuration (`.claude/noemeo-guard.json`) and
+limits: [docs/hooks.md](docs/hooks.md).
 
 ## License
 

@@ -5,7 +5,7 @@ description: Runs research in Noemeo repos -- framing a falsifiable question, ch
 
 # Noemeo research
 
-Procedure for the research role (`research/research.md`). Engineering
+Procedure for the research role (`roles/research/research.md`). Engineering
 procedures it leans on: `noemeo-llm-engineering` (evals, LLM-as-judge),
 `noemeo-prompt-engineering` (prompt hashes, before/after on the same
 inputs), `noemeo-ml-engineering` (splits, leakage).

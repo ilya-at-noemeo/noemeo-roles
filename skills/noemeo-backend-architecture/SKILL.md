@@ -5,7 +5,7 @@ description: Designs or reviews the backend of a Noemeo system -- where data liv
 
 # Noemeo backend architecture
 
-Procedure for the architecture role (`../../engineering/architecture.md`
+Procedure for the architecture role (`../../roles/engineering/architecture.md`
 relative to this skill's base directory) on backend work: services,
 APIs, data and the boundaries between them. Model-backed components go
 to `noemeo-llm-engineering` once this procedure has decided a model

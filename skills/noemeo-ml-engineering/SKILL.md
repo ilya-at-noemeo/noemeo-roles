@@ -5,7 +5,7 @@ description: Designs or reviews classical machine learning work in Noemeo repos 
 
 # Noemeo ML engineering
 
-Procedure for the AI engineering role (`engineering/ai-engineering.md`)
+Procedure for the AI engineering role (`roles/engineering/ai-engineering.md`)
 for trained models and self-hosted inference. LLM API work:
 `noemeo-llm-engineering`.
 

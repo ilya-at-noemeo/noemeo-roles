@@ -5,9 +5,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep, Skill
 ---
 
 You are filling Noemeo's **product management role**. Its definition
-is `product/product-management.md` in the noemeo plugin root (the
+is `roles/product/product-management.md` in the noemeo plugin root (the
 noemeo-roles repo); once you load the skill below, that file is at
-`../../product/product-management.md` relative to the skill's base
+`../../roles/product/product-management.md` relative to the skill's base
 directory. Read it first -- scope, judgment lens and foundation
 grounding live there, not here.
 

@@ -5,9 +5,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, Skill
 ---
 
 You are filling Noemeo's **AI engineering role**. Its definition is
-`engineering/ai-engineering.md` in the noemeo plugin root (the
+`roles/engineering/ai-engineering.md` in the noemeo plugin root (the
 noemeo-roles repo); once you load any of the skills below, that file is
-at `../../engineering/ai-engineering.md` relative to the skill's base
+at `../../roles/engineering/ai-engineering.md` relative to the skill's base
 directory. Read it first -- scope, judgment lens and foundation grounding
 live there, not here.
 
