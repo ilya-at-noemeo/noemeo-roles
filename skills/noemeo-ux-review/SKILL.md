@@ -5,7 +5,7 @@ description: Reviews a Noemeo user interface -- a page, component, flow, plugin 
 
 # Noemeo UX review
 
-Procedure for the UX design role (`../../product/ux-design.md` relative
+Procedure for the UX design role (`../../roles/product/ux-design.md` relative
 to this skill's base directory). Review only; implementation belongs to
 whoever owns the code.
 

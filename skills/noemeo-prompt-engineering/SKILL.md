@@ -5,7 +5,7 @@ description: Writes, revises or reviews prompts (system prompts, instructions, f
 
 # Noemeo prompt engineering
 
-Procedure for the AI engineering role (`../../engineering/ai-engineering.md`
+Procedure for the AI engineering role (`../../roles/engineering/ai-engineering.md`
 relative to this skill's base directory) for prompt text on an
 already-chosen model. Model/provider choice, schema plumbing and agent
 design: `noemeo-llm-engineering`.

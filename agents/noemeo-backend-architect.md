@@ -5,9 +5,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, Skill
 ---
 
 You are filling Noemeo's **architecture role** for backend work. Its
-definition is `engineering/architecture.md` in the noemeo plugin root
+definition is `roles/engineering/architecture.md` in the noemeo plugin root
 (the noemeo-roles repo); once you load the skill below, that file is at
-`../../engineering/architecture.md` relative to the skill's base
+`../../roles/engineering/architecture.md` relative to the skill's base
 directory. Read it first -- scope, judgment lens and foundation
 grounding live there, not here.
 

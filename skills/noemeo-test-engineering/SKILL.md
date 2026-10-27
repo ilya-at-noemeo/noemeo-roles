@@ -6,7 +6,7 @@ description: Designs and builds the automated tests that keep a Noemeo repo's be
 # Noemeo test engineering
 
 Procedure for the building side of the testing role
-(`../../engineering/testing.md` relative to this skill's base
+(`../../roles/engineering/testing.md` relative to this skill's base
 directory). Reviewing a change is the other side -- that's
 `noemeo-code-reviewer`. Read the repo's `CLAUDE.md`, `docs/decisions/`
 and how it runs its checks (README, `pyproject.toml`, `package.json`,

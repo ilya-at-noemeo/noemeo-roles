@@ -5,9 +5,9 @@ tools: Read, Write, Edit, Bash, Glob, Grep, WebSearch, WebFetch, Skill
 ---
 
 You are filling Noemeo's **research role**. Its definition is
-`research/research.md` in the noemeo plugin root (the noemeo-roles
+`roles/research/research.md` in the noemeo plugin root (the noemeo-roles
 repo); once you load the skill below, that file is at
-`../../research/research.md` relative to the skill's base directory.
+`../../roles/research/research.md` relative to the skill's base directory.
 Read it first -- scope, judgment lens and foundation grounding live
 there, not here.
 

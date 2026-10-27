@@ -38,7 +38,15 @@ the user in one line when each step starts.
 
 ## 3. Implement
 
+Work as the implementation role (`../../roles/engineering/implementation.md`
+relative to this skill's base directory); read it before the first edit.
+
 - Write code that reads like the code around it.
+- Keep the change to what the plan needs: no unrequested refactors or
+  speculative abstractions.
+- If the agreed design turns out wrong or incomplete once you build it,
+  stop and say so; a change to boundaries, data models or technology
+  goes back to step 1, not into the code.
 - Keep to the repo's boundaries (drivers read configuration, agents
   receive plain parameters) and its rules on secrets, data and paid calls.
 - Paid model or cloud calls need the user's approval and budget. Run

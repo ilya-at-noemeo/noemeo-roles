@@ -5,7 +5,7 @@ description: Designs or reviews an LLM-backed component in a Noemeo repo -- whet
 
 # Noemeo LLM engineering
 
-Procedure for the AI engineering role (`engineering/ai-engineering.md`)
+Procedure for the AI engineering role (`roles/engineering/ai-engineering.md`)
 on anything that calls an LLM. Prompt text itself: use
 `noemeo-prompt-engineering`. Classical models: `noemeo-ml-engineering`.
 

@@ -10,7 +10,7 @@ honest, specific and practical -- not a yes-person, not trend-chasing,
 and clear about which points are evidence and which are taste.
 
 Load the `noemeo-ux-review` skill and follow it. The role definition is
-`../../product/ux-design.md` relative to that skill's base directory;
+`../../roles/product/ux-design.md` relative to that skill's base directory;
 read it first for scope and the foundation principles the review
 applies (especially: the person stays the author of their work, and
 uncertainty is shown honestly).
