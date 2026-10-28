@@ -293,17 +293,24 @@ def copy_drift(root, repos, home):
     try:
         markets = json.loads((home / ".claude/plugins/known_marketplaces.json").read_text())
         installed = json.loads((home / ".claude/plugins/installed_plugins.json").read_text())
-        ours = {name for name, m in markets.items()
-                if Path(m["source"]["path"]).resolve() == root.resolve()
-                if m.get("source", {}).get("path")}
-        plugins = installed.get("plugins", {})
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        ours, plugins = set(), {}
-    for key, entries in plugins.items():
-        if key.split("@")[-1] not in ours:
+    except (OSError, ValueError):
+        markets, installed = {}, {}
+    ours = set()
+    # Judge each entry on its own: a marketplace from GitHub has no path.
+    for name, market in (markets.items() if isinstance(markets, dict) else []):
+        source = market.get("source") if isinstance(market, dict) else None
+        path = source.get("path") if isinstance(source, dict) else None
+        if isinstance(path, str) and Path(path).resolve() == root.resolve():
+            ours.add(name)
+    plugins = installed.get("plugins", {}) if isinstance(installed, dict) else {}
+    for key, entries in (plugins.items() if isinstance(plugins, dict) else []):
+        if key.split("@")[-1] not in ours or not isinstance(entries, list):
             continue
         for entry in entries:
-            copy = Path(entry.get("installPath", "/nonexistent"))
+            if not isinstance(entry, dict) or not isinstance(entry.get("installPath"), str):
+                problems.append(f"Claude's installed {key}: entry without an install path")
+                continue
+            copy = Path(entry["installPath"])
             changed = differs(root, copy, PLUGIN_DIRS) if copy.is_dir() else ["(copy missing)"]
             if changed:
                 problems.append(f"Claude's installed {key} ({entry.get('version')}) differs from "

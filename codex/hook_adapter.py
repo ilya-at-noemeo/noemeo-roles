@@ -15,8 +15,19 @@ ROOT = Path(__file__).resolve().parent.parent
 HOOKS = ROOT / "hooks"
 
 
-def run(name, event, cwd, timeout=30):
-    env = dict(os.environ, CLAUDE_PROJECT_DIR=str(cwd), PYTHONDONTWRITEBYTECODE="1")
+def project_dir(cwd):
+    """The Git checkout cwd is in, where its .claude/ policy lives; else cwd."""
+    result = subprocess.run(["git", "-C", str(cwd), "rev-parse", "--show-toplevel"],
+                            capture_output=True, text=True)
+    return result.stdout.strip() if result.returncode == 0 else str(cwd)
+
+
+def run(name, event, cwd, project, timeout=30):
+    # Hooks read the repo's policy from CLAUDE_PROJECT_DIR, which Claude
+    # fixes at the session's project root. It comes from the session's
+    # directory, never from a workdir the model picks; the command's own
+    # directory stays cwd.
+    env = dict(os.environ, CLAUDE_PROJECT_DIR=project, PYTHONDONTWRITEBYTECODE="1")
     executable = "bash" if name.endswith(".sh") else sys.executable
     result = subprocess.run(
         [executable, str(HOOKS / name)], input=json.dumps(event),
@@ -31,6 +42,15 @@ def run(name, event, cwd, timeout=30):
             "hookEventName": "SessionStart", "additionalContext": result.stdout,
         }}
     return json.loads(result.stdout)
+
+
+def guard(event, cwd, projects):
+    """The first denial from the guard under each project's policy, if any."""
+    for project in projects:
+        output = run("guard.py", event, cwd, project)
+        if denied(output):
+            return output
+    return None
 
 
 def patch_paths(command):
@@ -48,6 +68,7 @@ def denied(output):
 def dispatch(event):
     kind = event["hook_event_name"]
     cwd = Path(event["cwd"])
+    project = project_dir(cwd)
     data = event.get("tool_input") or {}
     name = event.get("tool_name", "")
     # Codex currently normalizes exec_command to Bash/command; tolerate raw
@@ -59,33 +80,36 @@ def dispatch(event):
         }}
         name = "Bash"
     if kind == "SessionStart":
-        return run("session_context.sh", event, cwd, 12)
+        return run("session_context.sh", event, cwd, project, 12)
     if kind == "PreToolUse":
+        # The session's policy always applies; a command run in another
+        # checkout must also pass that checkout's own.
+        projects = list(dict.fromkeys([project, project_dir(cwd)]))
         if name == "apply_patch":
             command = data.get("command", data.get("input", ""))
             for path in patch_paths(command):
-                output = run("guard.py", {**event, "tool_name": "Write",
-                             "tool_input": {"file_path": path}}, cwd)
+                output = guard({**event, "tool_name": "Write",
+                               "tool_input": {"file_path": path}}, cwd, projects)
                 if denied(output):
                     return output
             return None
-        output = run("guard.py", event, cwd)
+        output = guard(event, cwd, projects)
         if denied(output):
             return output
         if name == "Bash":
-            return run("review_gate.py", event, cwd)
+            return run("review_gate.py", event, cwd, project)
     if kind == "PostToolUse" and name in ("apply_patch", "Write", "Edit", "MultiEdit"):
         paths = patch_paths(data.get("command", data.get("input", ""))) if name == "apply_patch" else [data.get("file_path", "")]
         messages = []
         for path in paths:
             path = str((cwd / path).resolve())
-            output = run("ruff_touched_file.sh", {**event, "tool_input": {"file_path": path}}, cwd)
+            output = run("ruff_touched_file.sh", {**event, "tool_input": {"file_path": path}}, cwd, project)
             if output:
                 messages.append(output.get("reason") or output.get("systemMessage", ""))
         if messages:
             return {"decision": "block", "reason": "\n".join(messages)}
     if kind == "Stop":
-        return run("stop_tests.py", event, cwd, 290)
+        return run("stop_tests.py", event, cwd, project, 290)
     if kind == "SubagentStop":
         agent = event.get("agent_type", "").split(":")[-1]
         # Do not parse Codex transcripts as Claude transcripts, or record a
@@ -95,7 +119,7 @@ def dispatch(event):
             if not message.strip():
                 return {"systemMessage": "Noemeo: reviewer report absent; approval not recorded."}
             return run("review_record.py", {**event,
-                "agent_transcript_path": None, "transcript_path": None}, cwd)
+                "agent_transcript_path": None, "transcript_path": None}, cwd, project)
     return None
 
 

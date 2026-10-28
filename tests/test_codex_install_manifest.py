@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 import unittest
+import unittest.mock
 from contextlib import redirect_stdout, redirect_stderr
 import io
 
@@ -380,6 +381,104 @@ class InstallerHardeningTest(unittest.TestCase):
         self.assertIn("after\n", text)
 
 
+adapter_spec = importlib.util.spec_from_file_location("hook_adapter_m", ROOT / "codex" / "hook_adapter.py")
+adapter = importlib.util.module_from_spec(adapter_spec)
+adapter_spec.loader.exec_module(adapter)
+
+
+class AdapterProjectDirTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.repo = git_repo(Path(self.tmp.name).resolve())
+        (self.repo / ".claude").mkdir()
+        (self.repo / ".claude/noemeo-guard.json").write_text(json.dumps(
+            {"secrets": ["local.token"], "aws_profiles": ["noemeo-dev"]}))
+        (self.repo / "src").mkdir()
+        env = {k: v for k, v in os.environ.items() if k != "AWS_PROFILE"}
+        patcher = unittest.mock.patch.dict(os.environ, env, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def bash(self, command, cwd):
+        return adapter.dispatch({"hook_event_name": "PreToolUse", "cwd": str(cwd),
+                                 "tool_name": "Bash", "tool_input": {"command": command}})
+
+    def test_policy_applies_from_a_subdirectory(self):
+        for cwd in (self.repo, self.repo / "src"):
+            with self.subTest(cwd=cwd.name):
+                self.assertTrue(adapter.denied(self.bash("aws s3 ls", cwd)))
+                self.assertTrue(adapter.denied(self.bash("cat ../local.token" if cwd.name == "src"
+                                                          else "cat local.token", cwd)))
+        self.assertFalse(adapter.denied(self.bash("aws s3 ls --profile noemeo-dev", self.repo / "src")))
+
+    def test_raw_exec_workdir_subdirectory_uses_repo_policy(self):
+        result = adapter.dispatch({"hook_event_name": "PreToolUse", "cwd": self.tmp.name,
+            "tool_name": "exec_command", "tool_input": {
+            "cmd": "aws s3 ls", "workdir": str(self.repo / "src")}})
+        self.assertTrue(adapter.denied(result))
+
+    def test_project_dir_is_toplevel_in_git_and_cwd_outside(self):
+        self.assertEqual(adapter.project_dir(self.repo / "src"), str(self.repo))
+        with tempfile.TemporaryDirectory() as plain:
+            plain = str(Path(plain).resolve())
+            with unittest.mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": str(Path(plain).parent)}):
+                self.assertEqual(adapter.project_dir(plain), plain)
+
+
+class AdapterSessionPolicyTest(unittest.TestCase):
+    """The session's repo policy binds commands run from any workdir."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.dir = Path(self.tmp.name).resolve()
+        self.repo = git_repo(self.dir)
+        (self.repo / ".claude").mkdir()
+        (self.repo / ".claude/noemeo-guard.json").write_text(json.dumps(
+            {"secrets": ["local.token"], "aws_profiles": ["acme-dev"]}))
+        self.elsewhere = self.dir / "elsewhere"
+        self.elsewhere.mkdir()
+        env = {k: v for k, v in os.environ.items() if k != "AWS_PROFILE"}
+        env["GIT_CEILING_DIRECTORIES"] = str(self.dir)
+        patcher = unittest.mock.patch.dict(os.environ, env, clear=True)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def exec(self, session, command, workdir=None):
+        data = {"cmd": command}
+        if workdir:
+            data["workdir"] = str(workdir)
+        return adapter.dispatch({"hook_event_name": "PreToolUse", "cwd": str(session),
+                                 "tool_name": "exec_command", "tool_input": data})
+
+    def test_a_workdir_outside_the_repo(self):
+        self.assertTrue(adapter.denied(self.exec(self.repo, "aws s3 ls", self.elsewhere)))
+        self.assertFalse(adapter.denied(
+            self.exec(self.repo, "aws s3 ls --profile acme-dev", self.elsewhere)))
+
+    def test_b_nested_repo_without_policy(self):
+        nested = self.repo / "vendor/lib"
+        nested.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", str(nested)], check=True)
+        self.assertTrue(adapter.denied(self.exec(self.repo, "aws s3 ls", nested)))
+
+    def test_c_secret_read_from_outside_workdir(self):
+        self.assertTrue(adapter.denied(
+            self.exec(self.repo, f"cat {self.repo}/local.token", self.elsewhere)))
+
+    def test_d_apply_patch_on_secret(self):
+        result = adapter.dispatch({"hook_event_name": "PreToolUse", "cwd": str(self.repo),
+            "tool_name": "apply_patch", "tool_input": {"command":
+            "*** Begin Patch\n*** Update File: local.token\n*** End Patch"}})
+        self.assertTrue(adapter.denied(result))
+
+    def test_e_non_git_session_with_workdir_repo_policy(self):
+        plain = self.dir / "plain"
+        plain.mkdir()
+        self.assertTrue(adapter.denied(self.exec(plain, "cat local.token", self.repo)))
+
+
 class CopyDriftTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -438,6 +537,32 @@ class CopyDriftTest(unittest.TestCase):
         other.mkdir(parents=True)
         (other / "SKILL.md").write_text("a different plugin's skill\n")
         self.assertEqual(installer.copy_drift(ROOT, [self.repo], self.home), [])
+
+    def write_registry(self, markets, plugins):
+        (self.home / ".claude/plugins/known_marketplaces.json").write_text(json.dumps(markets))
+        (self.home / ".claude/plugins/installed_plugins.json").write_text(json.dumps({"plugins": plugins}))
+
+    def test_github_marketplace_without_path_does_not_hide_stale_copy(self):
+        copy = self.make_copy()
+        (copy / "agents/noemeo-code-reviewer.md").write_text("different\n")
+        self.write_registry(
+            {"gh": {"source": {"source": "github", "repo": "x/y"}},
+             "mk": {"source": {"path": str(ROOT)}}},
+            {"noemeo@mk": [{"installPath": str(copy), "version": "1"}]})
+        problems = installer.copy_drift(ROOT, [self.repo], self.home)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("noemeo@mk", problems[0])
+
+    def test_malformed_entries_do_not_crash_or_hide_other_results(self):
+        copy = self.make_copy()
+        (copy / "agents/noemeo-code-reviewer.md").write_text("different\n")
+        self.write_registry(
+            {"bad": "not a dict", "worse": {"source": "str"}, "mk": {"source": {"path": str(ROOT)}}},
+            {"noemeo@mk": [{"version": "1"}, "junk", {"installPath": str(copy), "version": "2"}],
+             "x@bad": "junk"})
+        problems = installer.copy_drift(ROOT, [self.repo], self.home)
+        self.assertTrue(any("(2) differs" in p for p in problems), problems)
+        self.assertTrue(any("without an install path" in p for p in problems), problems)
 
 
 class SessionContextTest(unittest.TestCase):
