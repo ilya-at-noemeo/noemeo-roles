@@ -17,10 +17,12 @@ mechanisms themselves.
    reviewer reports findings rather than silently changing what they
    review.
    *Status: partly enforced. The review gate requires a separate
-   reviewer's approval, and the reviewer agent has no file-editing
-   tools. The test engineer needs them to write tests, and tool
-   permissions can't limit them to test files, so its
-   no-product-code limit rests on its role
+   reviewer's approval. The reviewer's read-only limit rests on its
+   role: in Claude Code it has no Edit or Write tools but keeps Bash,
+   and under Codex it inherits the session's permissions. The test
+   engineer needs edit tools to write tests, and tool permissions
+   can't limit them to test files, so its no-product-code limit rests
+   on its role too
    ([#16](https://github.com/ilya-at-noemeo/noemeo-roles/issues/16)).*
 3. **Process independence from machinery.** Roles, acceptance criteria
    and governance rules are defined outside Claude Code, Codex, or any
@@ -36,7 +38,8 @@ mechanisms themselves.
    connected by declared inputs, outputs, exit criteria and revision
    loops -- not an open-ended conversation.
    *Status: partly. `noemeo-ship` declares each step from request to
-   PR, with its inputs and an exit condition; only the review step's
+   PR and its exit condition, and the inputs for the test and review
+   steps; only the review step's
    exit is enforced (by the review gate). The test step's is not yet
    checkable ([#15](https://github.com/ilya-at-noemeo/noemeo-roles/issues/15)).*
 5. **Independent verification.** A change passing the author's own
@@ -80,7 +83,7 @@ mechanisms themselves.
    mandatory safeguards.
    *Status: goal. Permissions and role boundaries apply, but every
    change gets the same pre-PR review whatever its size or risk, and
-   the PR itself is reviewed by a person, outside this machinery
+   the PR is left to a person to review, outside this machinery
    ([#17](https://github.com/ilya-at-noemeo/noemeo-roles/issues/17)).*
 10. **Reproducibility and continuous improvement.** Versioned artifacts,
     configurations and recorded results should support repeatable

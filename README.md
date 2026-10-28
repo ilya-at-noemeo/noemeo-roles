@@ -29,12 +29,13 @@ run whether or not the model chooses to perform them:
 - **Review gate** (PreToolUse + SubagentStop): no `gh pr create` until
   `noemeo-code-reviewer`, a separate agent that doesn't share the
   author's reasoning, has approved the change as it is now. Any later
-  edit voids the approval.
+  edit voids the approval. The same hook checks the reviewed change
+  under both tools.
 - **Guard** (PreToolUse): denies destructive git and file commands and
   access to secrets; optionally requires a named AWS profile.
 - **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
-  that opt in: lint fixed on every Python edit, and a turn can't end
-  while tests fail.
+  that opt in: lint fixed on every Python edit, and a failing test run
+  blocks the first attempt to end a turn and hands the failure back.
 - **Session context** (SessionStart): branch, uncommitted files, recent
   commits, open issues, last failing test run, and the working
   agreement.
@@ -54,8 +55,11 @@ the operations they intercept. Details, per-repo configuration
   measured baseline and reports before-and-after evidence.
 - **Separate responsibilities.** The author never grades its own work,
   the test engineer never edits product code, the reviewer reports but
-  never fixes. The reviewer agent is given no file-editing tools; the
-  rest rests on the roles.
+  never fixes. Without them, one generalist agent writes, tests and
+  approves its own change, on generic defaults. In Claude Code the
+  reviewer has no Edit or Write tools, though it keeps Bash; under
+  Codex it inherits the session's permissions. These limits rest on
+  the roles.
 
 ## Working with Claude Code and Codex
 
