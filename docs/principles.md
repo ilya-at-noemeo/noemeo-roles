@@ -20,7 +20,8 @@ mechanisms themselves.
    reviewer's approval, and the reviewer agent has no file-editing
    tools. The test engineer needs them to write tests, and tool
    permissions can't limit them to test files, so its
-   no-product-code limit rests on its role.*
+   no-product-code limit rests on its role
+   ([#16](https://github.com/ilya-at-noemeo/noemeo-roles/issues/16)).*
 3. **Process independence from machinery.** Roles, acceptance criteria
    and governance rules are defined outside Claude Code, Codex, or any
    model's private context. Provider adapters implement the contract
@@ -28,52 +29,69 @@ mechanisms themselves.
    verify, not assume.
    *Status: implemented for roles, skills and core hooks, which both
    tools read from one source; the Codex installer's `--check` catches
-   stale copies. Equivalent behaviour across tools is not measured.*
+   stale copies. Equivalent behaviour across tools is not measured
+   ([#19](https://github.com/ilya-at-noemeo/noemeo-roles/issues/19)).*
 4. **An explicit development lifecycle.** Requirements, design,
    implementation, independent testing, review and delivery are
    connected by declared inputs, outputs, exit criteria and revision
    loops -- not an open-ended conversation.
-   *Status: partly. `noemeo-ship` fixes the order from request to PR;
-   per-stage inputs, outputs and exit criteria are not yet declared.*
+   *Status: partly. `noemeo-ship` declares each step from request to
+   PR, with its inputs and an exit condition; only the review step's
+   exit is enforced (by the review gate). The test step's is not yet
+   checkable ([#15](https://github.com/ilya-at-noemeo/noemeo-roles/issues/15)).*
 5. **Independent verification.** A change passing the author's own
    checks is not the end of verification. A separate test engineer
    designs tests and demonstrates that they can fail; a separate
    reviewer challenges the proposed change, the tests included.
-   *Status: the review step is enforced by the review gate; proving
-   tests can fail is required by the testing role, not checked.*
+   *Status: partly. The review step is enforced by the review gate;
+   proving tests can fail is required by the testing role, not checked
+   ([#15](https://github.com/ilya-at-noemeo/noemeo-roles/issues/15)).*
 6. **Executable governance.** Safety- and quality-critical constraints
    belong in mechanisms such as hooks and CI checks wherever
    practicable, not solely in instructions that models may fail to
    follow. Enforcement must be checked for activation, bypasses and
    failure modes.
    *Status: partly. The hooks have tests, including attempts to slip a
-   PR past the review gate; no CI-side equivalent exists, so the checks
-   depend on hooks being installed and active.*
+   PR past the review gate, but the guard's destructive-command and
+   secret rules have only smoke tests
+   ([#13](https://github.com/ilya-at-noemeo/noemeo-roles/issues/13)).
+   The checks depend on hooks being installed and active, and the repo
+   has no CI ([#14](https://github.com/ilya-at-noemeo/noemeo-roles/issues/14)).*
 7. **Auditability and traceability.** Requirements, decisions, code
    versions, tests, failures, review findings, approvals and policy
    decisions should form inspectable evidence of what happened and
    which rules were applied. Observability is not the same as an
    independently verifiable audit trail.
    *Status: goal. Review verdicts are recorded against a fingerprint of
-   the reviewed change; the agent usage log covers Claude Code only.*
+   the reviewed change, but only in the local git directory; the agent
+   usage log covers Claude Code only
+   ([#18](https://github.com/ilya-at-noemeo/noemeo-roles/issues/18)).*
 8. **Evidence over assertion.** Tests should show that they detect the
    failures they claim to guard against. Model and prompt changes
    should be measured against baselines rather than judged by
    persuasive explanations.
-   *Status: required by roles and skills, not checked.*
+   *Status: required by roles and skills. The reviewer runs the
+   prompt-engineering review on prompt changes, which asks for a
+   baseline; neither that nor the tests' red runs are reported in a
+   checkable form ([#15](https://github.com/ilya-at-noemeo/noemeo-roles/issues/15)).*
 9. **Controlled, proportional autonomy.** Agents act within permissions
    and role boundaries. The degree of review and enforcement should
    reflect the scope and risk of the change, without eliminating
    mandatory safeguards.
    *Status: goal. Permissions and role boundaries apply, but every
    change gets the same pre-PR review whatever its size or risk, and
-   the PR itself is reviewed by a person, outside this machinery.*
+   the PR itself is reviewed by a person, outside this machinery
+   ([#17](https://github.com/ilya-at-noemeo/noemeo-roles/issues/17)).*
 10. **Reproducibility and continuous improvement.** Versioned artifacts,
     configurations and recorded results should support repeatable
     checks. The process should evolve in response to observed defects,
     review results and execution cost rather than assumptions about
     model capability.
-    *Status: goal.*
+    *Status: goal. Tests in CI
+    ([#14](https://github.com/ilya-at-noemeo/noemeo-roles/issues/14)) and
+    review records that name the model, plugin version and commit
+    ([#18](https://github.com/ilya-at-noemeo/noemeo-roles/issues/18))
+    are the first steps.*
 
 ## Engineering process
 
