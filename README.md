@@ -1,34 +1,75 @@
 # noemeo-roles
 
-Work interchangeably with **Claude Code and Codex**, with the same
-roles, skills and hooks keeping the work consistent between them.
-Roles define responsibilities and judgment, skills define how the work
-gets done, and shared hooks enforce safety and review checks. Both
-tools follow the same [working agreement](roles/working-agreement.md).
+**Governed, provider-independent AI-assisted software engineering.**
 
-- **Independent review as a gate.** With the hooks active, either
-  tool must obtain approval from a separate reviewer, which doesn't
-  share the author's reasoning, before opening a pull request through
-  `gh`. Any later edit voids the approval. The same hook checks the
-  reviewed change under both tools.
+Coding agents can implement features, write tests, inspect repositories
+and review changes. None of those capabilities, by itself, constitutes a
+software engineering process.
+
+**The engineering process governs the agents; the agent provider does
+not define the engineering process.**
+
+`noemeo-roles` separates the *engineering contract* -- who is
+responsible for what, what evidence is required, and when work may
+proceed -- from the *machinery* that executes it. It currently works
+with **Claude Code and Codex** through shared roles, skills and hook
+scripts, and both follow the same
+[working agreement](roles/working-agreement.md). The principles behind
+it, the lifecycle it aims for and what is still a goal are in
+[docs/principles.md](docs/principles.md).
+
+## What it does today
+
+### Enforced by hooks
+
+Both integrations run the same core hook scripts on their lifecycle
+events. Once installed, enabled and, for Codex, trusted, these checks
+run whether or not the model chooses to perform them:
+
+- **Review gate** (PreToolUse + SubagentStop): no `gh pr create` until
+  `noemeo-code-reviewer`, a separate agent that doesn't share the
+  author's reasoning, has approved the change as it is now. Any later
+  edit voids the approval. The same hook checks the reviewed change
+  under both tools.
+- **Guard** (PreToolUse): denies destructive git and file commands and
+  access to secrets; optionally requires a named AWS profile.
+- **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
+  that opt in: lint fixed on every Python edit, and a failing test run
+  blocks the first attempt to end a turn and hands the failure back.
+- **Session context** (SessionStart): branch, uncommitted files, recent
+  commits, open issues, last failing test run, and the working
+  agreement.
+- **Agent usage log** (Claude Code only, SubagentStop): one JSON line
+  per subagent run. Codex usage logging is not implemented.
+
+These hold only where the hooks are installed and active, and only for
+the operations they intercept. Details, per-repo configuration
+(`.claude/noemeo-guard.json`) and limits: [docs/hooks.md](docs/hooks.md).
+
+### Required by roles and skills, not mechanically checked
+
 - **Tests that prove they can fail.** The test engineer writes tests
-  only, and must show each one going red when the behaviour it pins
-  is broken.
-- **Guardrails in code, not in prompts.** Hooks deny destructive git
-  and file commands and access to secrets. In repos that opt in, they
-  also require a named AWS profile, fix lint on every Python edit and
-  keep a turn from ending while tests fail.
+  only, and must show each one going red when the behaviour it pins is
+  broken.
 - **Measured, not assumed.** Prompt and model work starts from a
   measured baseline and reports before-and-after evidence.
+- **Separate responsibilities.** The author never grades its own work,
+  the test engineer never edits product code, the reviewer reports but
+  never fixes. Without separate roles, one generalist agent writes,
+  tests and approves its own change, on generic defaults. In Claude
+  Code the reviewer has no Edit or Write tools, though it keeps Bash;
+  under Codex it inherits the session's permissions. The reviewer's
+  read-only limit and the test engineer's test-only limit rest on the
+  roles.
 
 ## Working with Claude Code and Codex
 
-Start a task in either tool and continue it in the other. Both read
-the same role definitions, skills and repository rules; Codex's
-adapter runs the same core hook scripts as the Claude Code plugin.
-The shared working agreement covers picking up work and leaving a
-handoff, so the branch, files, checks and next action carry the task
-between sessions. Private chat history does not transfer between tools.
+Start a task in either tool and continue it in the other. Both read the
+same role definitions, skills and repository rules; Codex's adapter runs
+the same core hook scripts as the Claude Code plugin. The shared working
+agreement covers picking up work and leaving a handoff, so the branch,
+files, checks and next action carry the task between sessions. Private
+chat history does not transfer between tools.
 
 Set up the [Claude Code plugin](docs/plugin.md) and the
 [Codex adapter](docs/codex.md) for the tools you use. Hooks must be
@@ -36,47 +77,41 @@ installed and active; Codex also requires the user to trust their
 definitions before they run. The Codex setup guide documents the
 remaining tool-specific differences and activation checks.
 
-## Why roles
+## Contract, execution and machinery
 
-Claude Code and Codex supply the machinery -- subagents, skills, hooks
--- while Noemeo defines the judgment: what good work looks like here,
-who may do what, and where one kind of work hands off to the next. A
-role writes that down for one kind of work (scope, out of scope,
-judgment, handoffs), in plain
-Markdown any person or model can follow. Skills and agents carry roles
-out; hooks enforce the parts that mustn't depend on the model.
+| Layer | Owns | Examples |
+| --- | --- | --- |
+| **Engineering governance** | Standards, responsibilities, boundaries, acceptance and evidence expectations | [Working agreement](roles/working-agreement.md), `roles/`, product-specific rules |
+| **Execution workflow** | Turning roles into repeatable tasks, checks, gates and handoffs | `skills/`, `agents/`, `hooks/` |
+| **Provider machinery** | Tool-specific agent invocation and lifecycle integration | [Claude Code plugin](docs/plugin.md), [Codex adapter](docs/codex.md) |
 
-Separate roles are what make independent review possible: the author
-never grades its own work, the test engineer never edits product code,
-the reviewer reports but never fixes. Without them, one generalist agent
-writes, tests and approves its own change, on generic defaults rather
-than Noemeo's. And because a role is plain text, it outlives the tool:
-when either tool changes, or a person takes on the work, the role stays
-and only the wiring changes.
+A **role** writes down one kind of work: scope, out of scope, hard
+limits where needed, judgment, and handoffs. **Skills and agents** carry
+roles out; **hooks** enforce the parts that mustn't depend on the
+model. Because a role is plain Markdown, any person or model can follow
+it, and it outlives the tool: when either tool changes, or a person
+takes on the work, the role stays and only the wiring changes.
 
 A role that nothing loads is just documentation, so a test checks that
 every file in `roles/` is read by at least one skill or agent.
 
-## What's here
-
-Three kinds of content, for three readers:
+## Repository organization
 
 | Kind | What it is | Read by | Where |
 | --- | --- | --- | --- |
-| **Roles** | Normative: scope, boundaries, judgment, handoffs | Agents, and people doing that work | `roles/` |
-| **Tool integration** | Shared workflows and checks, with a Claude Code plugin and a Codex adapter | Claude Code and Codex | `skills/`, `agents/`, `hooks/`, `codex/` (tested in `tests/`) |
+| **Roles** | Normative scope, boundaries, judgment and handoffs | Agents and people performing the work | `roles/` |
+| **Tool integration** | Shared workflows and checks, Claude Code plugin and Codex adapter | Claude Code and Codex | `skills/`, `agents/`, `hooks/`, `codex/` (tested in `tests/`) |
 | **Documentation** | How the system works and how to use it | People | `README.md`, `docs/` |
 
 Role files hold rules only, because agents load them into context;
 explanation goes in `docs/`, where no agent pays for it.
 
-This repo is **generic**: nothing here names or links a product or
-product-specific repo. Product-specific rules live in
-each product's own `CLAUDE.md` and `docs/`; skills read both.
-
-Everything is grounded in `noemeo-foundation` (private) -- the
-company-wide mission, principles and ethics. Anything here that
-contradicts the foundation is wrong, not the foundation.
+This repository is **generic**: it does not name or link a specific
+product or product repository. Product-specific rules live in each
+product's own `CLAUDE.md` and `docs/`; skills read both. Everything is
+grounded in `noemeo-foundation` (private), the company-wide mission,
+principles and ethics. Anything here that contradicts the foundation is
+wrong, not the foundation.
 
 ## Roles
 
@@ -131,26 +166,6 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 | `noemeo-code-reviewer` | agent | Independent, adversarial review of a change before commit/PR: correctness, security, intent, decisions -- verified by running the repo's checks. Read-only. |
 | `noemeo-researcher` | agent | Delegated research in its own context (research role): study plans, runs within an approved budget, write-ups and publication packages. Never changes product code to make a result happen; never submits externally. |
 | `noemeo-test-engineer` | agent | Building and maintaining test suites in its own context (testing role, building side): unit, integration, browser and host-SDK tests, each shown to fail. Writes tests only, never product code. |
-
-## Hooks
-
-Both integrations run the same core hook scripts on their lifecycle
-events. Once installed, enabled and, for Codex, trusted, these checks
-run independently of whether the model chooses to perform them.
-
-- **Guard** (PreToolUse): denies destructive commands and access to
-  secrets; optionally requires a named AWS profile.
-- **Review gate** (PreToolUse + SubagentStop): no `gh pr create` until
-  `noemeo-code-reviewer` has approved the change as it is now.
-- **Session context** (SessionStart): branch, uncommitted files, recent
-  commits, open issues, last failing test run, and the working agreement.
-- **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
-  that opt in.
-- **Agent usage log** (Claude Code only, SubagentStop): one JSON line
-  per subagent run. Codex usage logging is not implemented.
-
-Details, per-repo configuration (`.claude/noemeo-guard.json`) and
-limits: [docs/hooks.md](docs/hooks.md).
 
 ## Keeping the tools consistent
 
