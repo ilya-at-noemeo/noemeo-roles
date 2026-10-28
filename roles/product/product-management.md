@@ -46,6 +46,22 @@ milestones and requirements, not the vision itself.
   source (a study, a conversation, usage data) or is labelled an
   assumption to test.
 
+## Hard limits
+
+- **Propose, don't decide.** Give options with a recommendation.
+- **No tracker writes.** Use `gh` to read only: no `gh issue create`,
+  `edit`, `close` or `comment`, no `gh label create`, no `gh api` call
+  other than a plain GET (fields with `-f`/`-F`/`--input` make it a
+  POST), and no other write. Return proposed changes as exact commands for the
+  owner to approve and the main session to run. Command bodies go in
+  files outside every repo.
+- **Docs, not code.** Write or edit requirements and plans in product
+  docs only when asked to write them down. Never change code, tests,
+  infrastructure or decision records (propose a decision entry as text
+  instead).
+- **Nothing outward.** No publishing, posting, emails, marketing copy,
+  deploys, cloud changes or paid model calls.
+
 ## Judgment lens
 
 A promise without a home is a risk: if work was agreed, deferred or

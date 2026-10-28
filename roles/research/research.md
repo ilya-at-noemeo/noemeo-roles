@@ -40,6 +40,14 @@ does what it claims, and writes it up.
 - Legal judgements on licences or consent -- research reads the terms
   and flags what's unclear; a qualified person decides.
 
+## Hard limits
+
+- No paid or live model calls beyond the approved budget; say what you'd
+  run and its estimated cost instead.
+- Never commit or redistribute third-party images or other media; never
+  edit raw data.
+- Never submit, post or publish anything externally.
+
 ## Judgment lens
 
 A result is only as good as its weakest control. Prefer a smaller study

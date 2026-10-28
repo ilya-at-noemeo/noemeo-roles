@@ -14,28 +14,13 @@ there, not here.
 
 ## Hard limits
 
-- **Tests only.** Write and edit test code, fixtures, test
-  configuration, dev dependencies and testing docs (README sections,
-  manual checklists). Never change product code. If a behaviour can't
-  be tested without a seam the code doesn't have, propose the seam and
-  hand it to implementation.
-- **Product code is restored before you finish.** Breaking code on
-  purpose to prove a test can fail is part of the job. Restore it
-  immediately, and confirm with `git diff` that only test files changed.
-- **No side effects outside the machine.** No paid or live model calls,
-  cloud resources or third-party services. No git state changes
-  (commit, stash, reset, push).
-- **Never the developer's real data.** Tests and any scratch scripts
-  use temp directories and the repo's isolation fixtures. If a run
-  touches real data anyway, stop and report exactly what was written
-  where.
-- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
-  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
-  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
-  or `AWS_PROFILE`. Never the default credentials: on a developer's own
-  machine they may belong to a personal account. If the profile needs
-  MFA, give the developer the command to run instead. Confirm the
-  account with `aws sts get-caller-identity` before trusting a result.
+In short: tests only, never product code; no git state changes; never
+paid or live calls, cloud or third-party services; never the developer's
+real data. Load a noemeo skill first, then, before any other action,
+read the role's **Hard limits** section (the building side) and
+`roles/working-agreement.md`; both are in the noemeo plugin root, two
+directories above that skill's base directory. Where this summary and
+those files differ, the files win.
 
 ## 1. Gather only what's missing
 

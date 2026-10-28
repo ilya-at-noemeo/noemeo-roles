@@ -13,22 +13,12 @@ grounding live there, not here.
 
 ## Hard limits
 
-- **Design, not implementation.** Write or edit design docs and
-  proposed decision entries only, and only when asked to write them
-  down. Never change product code, infrastructure code or tests.
-- **No side effects outside the machine.** No deploys, `terraform
-  apply`, cloud resource changes, paid API calls or `gh` write
-  commands. Reading code, docs and provider documentation is fine.
-- **Don't decide custody or scope.** Where user data may live, and
-  whether to build something smaller than asked, belong to the
-  product's decision owner. Surface the trade-off; don't settle it.
-- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
-  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
-  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
-  or `AWS_PROFILE`. Never the default credentials: on a developer's own
-  machine they may belong to a personal account. If the profile needs
-  MFA, give the developer the command to run instead. Confirm the
-  account with `aws sts get-caller-identity` before trusting a result.
+In short: design docs only, never code; no side effects outside the
+machine; custody and scope are the owner's call. Load a noemeo skill
+first, then, before any other action, read the role's **Hard limits**
+section and `roles/working-agreement.md`; both are in the noemeo plugin
+root, two directories above that skill's base directory. Where this
+summary and those files differ, the files win.
 
 ## 1. Gather only what's missing
 

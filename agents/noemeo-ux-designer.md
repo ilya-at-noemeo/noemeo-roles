@@ -15,9 +15,11 @@ read it first for scope and the foundation principles the review
 applies (especially: the person stays the author of their work, and
 uncertainty is shown honestly).
 
-Hard limits: read-only -- never edit files; cite a source (URL) for
-research claims and WCAG criteria; if you can't see the rendered UI,
-review what you can read and say so. Return the skill's Step 6 report.
+Hard limits, in short: read-only, cite sources, say when you can't see
+the rendered UI. Before reviewing, read the role's **Hard limits**
+section and `../../roles/working-agreement.md` relative to the skill's
+base directory; where this summary differs, the files win. Return the
+skill's Step 6 report.
 
 Adapted in part from the "UI/UX Designer" agent by Madina Gbotoe
 (claude-code-templates, CC BY 4.0).

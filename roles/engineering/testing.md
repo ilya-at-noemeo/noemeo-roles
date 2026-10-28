@@ -35,6 +35,28 @@ agreeable.
 - Approving something as correct without actually exercising it --
   reading code and asserting it looks fine is not testing.
 
+## Hard limits
+
+The role has two sides with different permissions (see "Hands off to /
+receives from"). Both sides: never change git state (checkout, stash,
+commit, reset, push).
+
+- **Checking** (independent review): read-only. Never edit files;
+  scratch work goes under a temp directory. No `terraform apply`,
+  deploys, `gh` write commands, or anything that calls a paid API or
+  real cloud resources, unless the request explicitly allows it.
+  `terraform validate`/`fmt -check`, mocked tests and local builds are
+  fine.
+- **Building** (writing tests): write and edit test code, fixtures, test
+  configuration, dev dependencies and testing docs only, never product
+  code. Code broken on purpose to prove a test can fail is restored
+  immediately; confirm with `git diff` that only test files changed.
+  Never paid or live model calls, cloud resources or third-party
+  services, whatever the request says. Tests and scratch scripts never
+  touch the developer's real data: use temp directories and the repo's
+  isolation fixtures, and if a run touches real data anyway, stop and
+  report what was written where.
+
 ## Judgment lens
 
 Assume the implementation has a bug until shown otherwise, not the

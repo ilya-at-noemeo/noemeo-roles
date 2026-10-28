@@ -64,6 +64,7 @@ contradicts the foundation is wrong, not the foundation.
 
 ```text
 roles/
+  working-agreement.md    -- rules every role follows: sources, safety, review, handoff
   product/
     vision.md             -- product vision & positioning
     product-management.md -- backlog, milestones, requirements, priorities
@@ -77,8 +78,8 @@ roles/
     research.md           -- studies, benchmarks, controlled experiments, write-ups
 ```
 
-Each follows the same shape: **Scope**, **Out of scope**, **Judgment
-lens**, **Grounded in** (how `noemeo-foundation` binds it), and **Hands
+Each role follows the same shape: **Scope**, **Out of scope**, **Hard
+limits** (where the role has them), **Judgment lens**, **Grounded in** (how `noemeo-foundation` binds it), and **Hands
 off to / receives from**. They're most useful as a lens to ask for
 ("review this as the testing role would"), and as onboarding text for a
 person taking on that kind of work. New roles only when there's a real
@@ -122,13 +123,20 @@ the model decides.
 - **Review gate** (PreToolUse + SubagentStop): no `gh pr create` until
   `noemeo-code-reviewer` has approved the change as it is now.
 - **Session context** (SessionStart): branch, uncommitted files, recent
-  commits, open issues, last failing test run.
+  commits, open issues, last failing test run, and the working agreement.
 - **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
   that opt in.
 - **Agent usage log** (SubagentStop): one JSON line per subagent run.
 
 Details, per-repo configuration (`.claude/noemeo-guard.json`) and
 limits: [docs/hooks.md](docs/hooks.md).
+
+## Codex
+
+Codex fills the same roles from the same files: an installer writes
+per-checkout adapter files that point at this checkout, and the same
+hooks run through an adapter. Setup, updating and limits:
+[docs/codex.md](docs/codex.md).
 
 ## License
 

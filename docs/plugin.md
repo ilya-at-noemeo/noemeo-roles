@@ -26,7 +26,9 @@ definition in `roles/` (`noemeo-code-reviewer` fills `roles/engineering/testing.
 `noemeo-researcher` fills `roles/research/research.md`,
 `noemeo-ux-designer` fills `roles/product/ux-design.md`,
 `noemeo-product-manager` fills `roles/product/product-management.md`): it
-loads the role and the skills rather than restating them.
+loads the role, the skills and `roles/working-agreement.md` rather than
+restating them. A role's hard limits live in the role, so Codex's agents
+get the same ones.
 `noemeo-test-engineer` fills the same testing role as
 `noemeo-code-reviewer`, from the
 building side: one writes the tests, the other checks the change
