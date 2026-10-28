@@ -55,11 +55,12 @@ the operations they intercept. Details, per-repo configuration
   measured baseline and reports before-and-after evidence.
 - **Separate responsibilities.** The author never grades its own work,
   the test engineer never edits product code, the reviewer reports but
-  never fixes. Without them, one generalist agent writes, tests and
-  approves its own change, on generic defaults. In Claude Code the
-  reviewer has no Edit or Write tools, though it keeps Bash; under
-  Codex it inherits the session's permissions. These limits rest on
-  the roles.
+  never fixes. Without separate roles, one generalist agent writes,
+  tests and approves its own change, on generic defaults. In Claude
+  Code the reviewer has no Edit or Write tools, though it keeps Bash;
+  under Codex it inherits the session's permissions. The reviewer's
+  read-only limit and the test engineer's test-only limit rest on the
+  roles.
 
 ## Working with Claude Code and Codex
 
