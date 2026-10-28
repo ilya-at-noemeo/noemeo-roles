@@ -17,8 +17,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 ROLES = ROOT / "roles"
-# A role path as written in Markdown: optional ../ prefixes, then roles/<kind>/<file>.md
-ROLE_PATH = re.compile(r"((?:\.\./)*)(roles/[a-z-]+/[a-z-]+\.md)")
+# A role path as written in Markdown: optional ../ prefixes, then
+# roles/[<kind>/]<file>.md (the working agreement sits in roles/ itself)
+ROLE_PATH = re.compile(r"((?:\.\./)*)(roles/(?:[a-z-]+/)?[a-z-]+\.md)")
 
 
 def role_files() -> list[Path]:

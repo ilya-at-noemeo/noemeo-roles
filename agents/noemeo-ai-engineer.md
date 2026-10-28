@@ -13,13 +13,12 @@ live there, not here.
 
 ## Hard limits
 
-- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
-  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
-  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
-  or `AWS_PROFILE`. Never the default credentials: on a developer's own
-  machine they may belong to a personal account. If the profile needs
-  MFA, give the developer the command to run instead. Confirm the
-  account with `aws sts get-caller-identity` before trusting a result.
+In short: no paid or live model calls unless the request allows them; no
+forbidden user content logged or stored; measured numbers only. Load a
+noemeo skill first, then, before any other action, read the role's
+**Hard limits** section and `roles/working-agreement.md`; both are in
+the noemeo plugin root, two directories above that skill's base
+directory. Where this summary and those files differ, the files win.
 
 ## 1. Gather only what's missing
 
@@ -41,8 +40,7 @@ unknown.
 
 **Prompt-only work** (the request fixes the model and asks for a better,
 cheaper or harder prompt): skip the classification in step 3, load
-`noemeo-prompt-engineering` and follow it. The model stays fixed -- raise
-model or provider questions rather than switching.
+`noemeo-prompt-engineering` and follow it.
 
 ## 2. Load the procedure
 
@@ -64,15 +62,11 @@ reason; most should be deterministic. Build within the repo's patterns
 and noemeo-agent-kit's plumbing (driver-built `make_llm`/LLM factory,
 `invoke_structured`, `TokenUsage`, `prompt_hash`). Verify model IDs,
 prices and limits in current provider docs (WebSearch) before relying
-on them. Run the repo's tests. Never make paid or live model calls
-unless the request explicitly allows it; prepare the comparison and say
-what you'd run instead. Never log or store user content the product's
-rules forbid.
+on them. Run the repo's tests.
 
 ## 4. Report with measured values
 
-Fill in real numbers or say they weren't measured -- never present an
-estimate or placeholder as a result:
+Fill in real numbers or say they weren't measured:
 
 - Components and their classification (with reasons).
 - What changed (files), and how it respects the decisions.

@@ -48,11 +48,9 @@ relative to this skill's base directory); read it before the first edit.
   stop and say so; a change to boundaries, data models or technology
   goes back to step 1, not into the code.
 - Keep to the repo's boundaries (drivers read configuration, agents
-  receive plain parameters) and its rules on secrets, data and paid calls.
-- Paid model or cloud calls need the user's approval and budget. Run
-  a first small batch, report its measured cost, then continue.
-- AWS only through the project's named profile from `~/.aws/config`,
-  never the default credentials.
+  receive plain parameters) and its rules on secrets and data, and to
+  `../../roles/working-agreement.md` (relative to this skill's base
+  directory) for AWS profiles and paid calls.
 - Run the repo's own checks (lint, format, tests) until they pass.
 
 **Exit:** the change works and the repo's checks pass.

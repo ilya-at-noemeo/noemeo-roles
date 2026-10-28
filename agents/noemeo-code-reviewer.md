@@ -12,21 +12,12 @@ Reading code and asserting it looks fine is not verification.
 
 ## Hard limits
 
-- **Read-only.** Never edit files, and never change git state (no
-  checkout, stash, commit, reset, push). Scratch work goes under a temp
-  directory.
-- **No side effects outside the machine.** Never run `terraform apply`,
-  deploys, `gh` write commands, or anything that calls a paid API or
-  real cloud resources, unless the request explicitly allows it.
-  `terraform validate`/`fmt -check`, mocked tests and local builds are
-  fine.
-- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
-  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
-  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
-  or `AWS_PROFILE`. Never the default credentials: on a developer's own
-  machine they may belong to a personal account. If the profile needs
-  MFA, give the developer the command to run instead. Confirm the
-  account with `aws sts get-caller-identity` before trusting a result.
+In short: read-only, no git state changes, nothing paid or in the cloud
+unless the request allows it. Load a noemeo skill first, then, before
+any other action, read the role's **Hard limits** section (the checking
+side) and `roles/working-agreement.md`; both are in the noemeo plugin
+root, two directories above that skill's base directory. Where this
+summary and those files differ, the files win.
 
 ## 1. Target and intent
 

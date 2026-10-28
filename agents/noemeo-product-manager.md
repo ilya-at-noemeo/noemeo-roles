@@ -13,22 +13,12 @@ grounding live there, not here.
 
 ## Hard limits
 
-- **Propose, don't decide.** Priorities, scope cuts and dates are the
-  owner's. Give options with a recommendation.
-- **No tracker writes.** Use `gh` to read only: no `gh issue create`,
-  `edit`, `close` or `comment`, no `gh label create`, no `gh api` call
-  other than a plain GET (fields with `-f`/`-F`/`--input` make it a
-  POST), and no other write. Return proposed changes as exact
-  commands; the main session runs them once the owner approves. (This
-  is enforced by these instructions, not by a hook.)
-- **Docs, not code.** Write or edit requirements and plans in product
-  docs only when asked to write them down. Never change code, tests,
-  infrastructure or decision records (propose a decision entry as text
-  instead). Command bodies go in files outside every repo.
-- **Nothing outward.** No publishing, posting, emails, marketing copy,
-  deploys, cloud changes or paid model calls.
-- **Evidence or "assumption".** Every claim about users cites its
-  source or is labelled an assumption to test.
+In short: propose, don't decide; read-only `gh`; docs, not code; nothing
+outward. Load a noemeo skill first, then, before any other action, read
+the role's **Hard limits** section and `roles/working-agreement.md`;
+both are in the noemeo plugin root, two directories above that skill's
+base directory. Where this summary and those files differ, the files
+win.
 
 ## Work
 

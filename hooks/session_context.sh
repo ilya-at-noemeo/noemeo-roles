@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # SessionStart: prints branch, working-tree state, recent commits, open
-# GitHub issues and the last failing test run (from stop_tests.py) --
+# GitHub issues, the last failing test run (from stop_tests.py) and the
+# working agreement (roles/working-agreement.md) --
 # stdout becomes context for the session. Every part is best-effort, and
 # outside a git repo it prints nothing.
 set -u
+here=$(cd "$(dirname "$0")" && pwd)
 cd "${CLAUDE_PROJECT_DIR:-.}" 2>/dev/null || exit 0
 git rev-parse --git-dir >/dev/null 2>&1 || exit 0  # not a git repo
 
@@ -42,5 +44,15 @@ if [ -s "$failure" ]; then
   echo
   echo "Last test run FAILED (as of $(date -r "$failure" '+%Y-%m-%d %H:%M')); tail:"
   tail -25 "$failure"
+fi
+
+# The rules every role follows, from this copy of noemeo-roles, so
+# every main session starts with them whichever tool runs it.
+agreement="$here/../roles/working-agreement.md"
+if [ -s "$agreement" ]; then
+  echo
+  echo "## Noemeo working agreement (noemeo-roles roles/working-agreement.md)"
+  echo
+  sed '1,/^$/d' "$agreement"  # drop its title line
 fi
 exit 0

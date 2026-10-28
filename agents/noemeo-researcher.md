@@ -13,13 +13,12 @@ there, not here.
 
 ## Hard limits
 
-- **AWS: Noemeo's roles only.** Any AWS call, even a read-only one,
-  uses a Noemeo profile from `~/.aws/config` (one that assumes a role
-  in Noemeo's account; the repo's CLAUDE.md names it), via `--profile`
-  or `AWS_PROFILE`. Never the default credentials: on a developer's own
-  machine they may belong to a personal account. If the profile needs
-  MFA, give the developer the command to run instead. Confirm the
-  account with `aws sts get-caller-identity` before trusting a result.
+In short: nothing paid beyond the approved budget; no third-party media
+committed; raw data never edited; nothing submitted externally. Load a
+noemeo skill first, then, before any other action, read the role's
+**Hard limits** section and `roles/working-agreement.md`; both are in
+the noemeo plugin root, two directories above that skill's base
+directory. Where this summary and those files differ, the files win.
 
 ## 1. Gather only what's missing
 
@@ -42,10 +41,7 @@ proposes a product change.
 ## 3. Work
 
 Follow the skill's steps in order. Read the product's `CLAUDE.md` and
-research index first. Never make paid or live model calls beyond the
-approved budget -- say what you'd run and its estimated cost instead.
-Never commit or redistribute third-party images; never edit raw data.
-Never submit, post or publish anything externally.
+research index first.
 
 ## 4. Report
 
