@@ -7,15 +7,24 @@ merge-base with the base branch -- committed, uncommitted or untracked
 further edit changes it. Records live in the repo's git directory
 (`noemeo-reviews.jsonl`), never in the tree. Shared by review_record.py
 (SubagentStop) and review_gate.py (PreToolUse).
+
+LOG holds one line per reviewer stop: what was recorded, or why nothing
+was. It sits outside every repo, since a stop that names no repo is
+logged too.
 """
 
 import hashlib
 import json
+import os
 import subprocess
 import time
 from pathlib import Path
 
 RECORDS = "noemeo-reviews.jsonl"
+LOG = Path(
+    os.environ.get("NOEMEO_REVIEW_RECORD_LOG")
+    or Path.home() / ".claude" / "noemeo-review-record.jsonl"
+)
 
 
 def git(repo: Path, *args: str) -> str:
@@ -113,13 +122,41 @@ def record(repo: Path, verdict: str, summary: str) -> list[str]:
     return done
 
 
-def _write(out, repo: Path, base: str, verdict: str, summary: str) -> list[str]:
-    fp = fingerprint(repo, base)
+def _write(out, repo: Path, base: str, verdict: str, summary: str, fp: str | None = None) -> list[str]:
+    fp = fp or fingerprint(repo, base)
     if not fp:
         return []
     row = {"time": time.time(), "base": base, "fingerprint": fp, "verdict": verdict}
     out.write(json.dumps({**row, "summary": summary[:500]}) + "\n")
     return [base]
+
+
+def snapshot(repo: Path) -> dict[str, str]:
+    """The repo's fingerprint against each base record() would use, taken
+    now, for recording a review later without the edits made meanwhile."""
+    defaults = candidate_bases(repo)
+    fingerprints = {}
+    for base in [*defaults, *stacked_bases(repo, defaults)]:
+        fp = fingerprint(repo, base)
+        if fp:
+            fingerprints[base] = fp
+    return fingerprints
+
+
+def record_snapshot(repo: Path, verdict: str, summary: str, fingerprints: dict[str, str]) -> list[str]:
+    """Record a review against fingerprints snapshot() took when it ended."""
+    with open(records_path(repo), "a") as out:
+        return [b for base, fp in fingerprints.items() for b in _write(out, repo, base, verdict, summary, fp)]
+
+
+def log(event: dict, outcome: str, report: str = "") -> None:
+    """Append a reviewer stop's outcome to LOG."""
+    row = {"time": time.time(), "agent_id": event.get("agent_id"), "outcome": outcome}
+    if report:
+        row["report"] = report
+    LOG.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOG, "a") as out:
+        out.write(json.dumps(row) + "\n")
 
 
 def latest(repo: Path, base: str) -> dict | None:

@@ -4,6 +4,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -74,7 +75,9 @@ class CodexAdapterTest(unittest.TestCase):
         self.assertTrue(adapter.denied(json.loads(result.stdout)))
 
     def test_review_gate_survives_tool_switch_and_invalidates_edits(self):
-        with tempfile.TemporaryDirectory() as tmp:
+        with tempfile.TemporaryDirectory() as tmp, tempfile.TemporaryDirectory() as logdir, patch.dict(
+            os.environ, {"NOEMEO_REVIEW_RECORD_LOG": str(Path(logdir) / "record.log")}
+        ):
             repo = Path(tmp)
             def git(*args):
                 subprocess.run(["git", "-C", tmp, *args], check=True, capture_output=True)
