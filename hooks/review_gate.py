@@ -28,7 +28,7 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # no __pycache__ beside the hooks
 sys.path.insert(0, str(Path(__file__).parent))
-from review_state import candidate_bases, latest, toplevel  # noqa: E402
+from review_state import LOG, candidate_bases, latest, toplevel  # noqa: E402
 
 
 def _deny(reason: str) -> None:
@@ -207,7 +207,9 @@ def main() -> None:
         f"this branch against {base.removeprefix('origin/')}, naming the repo by its absolute "
         "path; then open the PR. A verdict of Ready or Ready with nits lets it through. If "
         f"{base} has gained commits since this branch was based on it, rebase onto it first: "
-        "a review is recorded only against bases already in the branch's history."
+        "a review is recorded only against bases already in the branch's history. A review "
+        "that just finished can take up to two minutes to be recorded: wait and retry before "
+        f"reviewing again. {LOG} says what each recent review recorded, or why it didn't."
     )
 
 
