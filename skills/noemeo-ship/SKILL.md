@@ -78,6 +78,13 @@ the change.
   each repo by absolute path. Give it:
   - what the change is for and the risky parts to probe;
   - what it may not do (paid calls, AWS calls, secrets).
+- An access change also gets `noemeo-iam-review`: when the diff touches
+  an `aws_iam_*` resource, a policy document, a trust policy, or a
+  workflow that assumes a cloud role (`id-token: write`,
+  `configure-aws-credentials`), tell the reviewer to run that skill too
+  and include its findings table. Its verdict goes in the PR body. A
+  hand read of the plan is not a substitute, and neither is a review
+  run after the apply.
 - Fix every defect and any nit worth fixing. Then send the fixes back
   to the same reviewer (SendMessage) for a re-review of the delta.
   Repeat until every repo is **Ready** or **Ready with nits**.
