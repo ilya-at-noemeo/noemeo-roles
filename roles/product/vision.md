@@ -62,10 +62,12 @@ at the start of a thread.
 **Hands off to:** product management, to sequence the work and write a
 feature's requirements, and through it to the architecture role, once
 those requirements are clear enough to ask "what needs to be true
-technically for this to work."
+technically for this to work." Positioning goes to the go-to-market
+role, to turn into messaging, copy and pricing proposals.
 
-**Receives from:** no upstream role within this repo -- product vision
-originates from direct founder input, user feedback, and market signal,
-not from another role's output. When picking up an existing product,
+**Receives from:** no upstream role produces the vision -- it
+originates from direct founder input, user feedback, and market signal.
+Market evidence other roles hand back, such as the go-to-market role's,
+informs it. When picking up an existing product,
 read that product's own `docs/product-vision.md` for prior decisions
 before proposing new ones.
