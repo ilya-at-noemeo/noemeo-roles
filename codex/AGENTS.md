@@ -13,6 +13,7 @@ noemeo-roles (the parent of this file's directory).
 3. The role for the work:
    - Vision: `roles/product/vision.md`.
    - Planning: `roles/product/product-management.md`.
+   - Marketing, launches, pricing: `roles/product/go-to-market.md`.
    - UX: `roles/product/ux-design.md`.
    - Architecture: `roles/engineering/architecture.md`.
    - AI, prompts, evaluation, ML: `roles/engineering/ai-engineering.md`.

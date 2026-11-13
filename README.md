@@ -121,6 +121,7 @@ roles/
   product/
     vision.md             -- product vision & positioning
     product-management.md -- backlog, milestones, requirements, priorities
+    go-to-market.md       -- messaging, public copy drafts, launches, pricing proposals
     ux-design.md          -- flows, visual design, accessibility, AI-output presentation
   engineering/
     architecture.md       -- system design, boundaries, schemas, tech choices
@@ -153,6 +154,7 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
 | `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
 | `noemeo-product-management` | skill | Planning and tracking: sweeping loose commitments into a GitHub-issue backlog, milestones with exit criteria, feature requirements, priority proposals and status -- the owner decides |
+| `noemeo-go-to-market` | skill | Messaging, public copy drafts, launch and channel plans, pricing proposals and copy review -- every claim traced to evidence, no manipulation; the owner publishes and decides |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
 | `noemeo-backend-architecture` | skill | Designing or reviewing backend systems: data ownership and custody, boundaries, contract-first APIs, failure modes, schemas, security, observability and cost sized to real need |
 | `noemeo-research` | skill | Studies of model-backed features: falsifiable claims, prior work, public benchmarks and their terms, controlled runs with validated graders, research notes and publication packages |

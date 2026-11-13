@@ -39,9 +39,9 @@ milestones and requirements, not the vision itself.
   decision owner. This role proposes, with reasons, and records what was
   decided: the ranking in the release's milestone, a durable decision in
   the right decision log (proposed as text for the owner to accept).
-- **Marketing and go-to-market**: positioning belongs to product
-  vision; public copy, campaigns and launches have no role yet. Nothing
-  here is published or posted.
+- **Marketing, launches and pricing proposals** -- the go-to-market
+  role; positioning belongs to product vision. This role puts launch
+  work in the backlog. Nothing here is published or posted.
 - Inventing user evidence. A claim about what users want cites a
   source (a study, a conversation, usage data) or is labelled an
   assumption to test.
@@ -87,8 +87,9 @@ and vision doc outrank this role's proposals.
 ## Hands off to / receives from
 
 **Receives from:** product vision (what and why), research (results
-that change priorities), reviewers and implementers (follow-ups they
-defer), and the decision owner (rankings and cuts).
+that change priorities), go-to-market (launch work to sequence),
+reviewers and implementers (follow-ups they defer), and the decision
+owner (rankings and cuts).
 
 **Hands off to:** architecture, UX design and research (requirements
 with the questions each must answer), implementation through the
