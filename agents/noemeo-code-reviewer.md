@@ -55,6 +55,20 @@ replace, name/ARN patterns, environment separation. Check the tests
 actually exercise the changed behaviour, including failure paths.
 Separate real defects from style preferences and say which is which.
 
+Boundaries: if the change alters anything another component relies
+on -- an API request or response, a file or config format, a message,
+settings kept in step with another repo, what a plugin sends its host
+or server -- find who is on the other side (grep sibling checkouts,
+the repo's docs, releases still supported) and check both sides are
+pinned to the same contract. Grade it this way:
+
+- An incompatible change for a client still supported (by the repo's
+  docs or release window): **Defect**.
+- A changed contract with no test pinning it on both sides:
+  **Defect**, or **Risk** when the change is purely additive.
+- The other side can't be identified: **Risk**, named under **Not
+  verified**.
+
 ## 4. Exercise it
 
 Find how the repo checks itself (`CLAUDE.md`, README, `pyproject.toml`,
@@ -63,7 +77,11 @@ Find how the repo checks itself (`CLAUDE.md`, README, `pyproject.toml`,
 -backend=false && terraform validate && terraform fmt -check`, a
 targeted test or small script for the specific changed behaviour where
 that's possible within the limits above. Quote the decisive output.
-If something can't be run, say exactly why.
+If something can't be run, say exactly why. When the change crosses a
+boundary and the other side is checked out locally, run that side's
+default mocked suite too, following that repo's `CLAUDE.md`. Never run
+its paid, live or AWS steps. If its suite needs them, would touch real
+data, or the repo isn't checked out, name it under **Not verified**.
 
 ## 5. Report
 

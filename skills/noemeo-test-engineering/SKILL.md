@@ -1,6 +1,6 @@
 ---
 name: noemeo-test-engineering
-description: Designs and builds the automated tests that keep a Noemeo repo's behaviour verified -- picking the right level per behaviour (unit, integration through the real seam, browser end-to-end with a mocked network, fakes for a host application's SDK, a manual checklist for the rest), keeping tests hermetic and free of paid calls, proving each test can fail, and wiring them into the repo's normal check command. Use when adding or extending a test suite, when a surface (a web UI, a plugin, a script) has no automated tests, when turning one-off verification into repeatable tests, or when asked for a test strategy.
+description: Designs and builds the automated tests that keep a Noemeo repo's behaviour verified -- picking the right level per behaviour (unit, integration through the real seam, contract tests on both sides of a boundary between components or repos, browser end-to-end with a mocked network, fakes for a host application's SDK, a manual checklist for the rest), keeping tests hermetic and free of paid calls, proving each test can fail, and wiring them into the repo's normal check command. Use when adding or extending a test suite, when a surface (a web UI, a plugin, a script) has no automated tests, when turning one-off verification into repeatable tests, or when asked for a test strategy.
 ---
 
 # Noemeo test engineering
@@ -21,6 +21,13 @@ CI workflows) first; they override anything generic here.
   script running inside another application, infra) and the tests that
   cover it today. A surface verified only by hand, or by a script that
   was run once and not kept, counts as untested.
+- **Where components meet:** each boundary the change crosses or the
+  surface exposes -- an API and its clients, a plugin and the server it
+  calls, a file or config written by one part and read by another,
+  values kept in step across repos -- with where its contract is
+  defined, who is on each side (including other repos and releases
+  still installed), and which side's tests pin it. A boundary pinned on
+  one side only counts as untested.
 - **Gaps first:** start where a regression would be most costly and
   least visible.
 
@@ -30,6 +37,9 @@ CI workflows) first; they override anything generic here.
 | --- | --- |
 | Pure logic, parsing, formatting | Unit test |
 | A route, graph or workflow end to end | Integration through the real code, faking only the outermost seam |
+| A boundary between two components or repos | Contract tests on both sides against one source of the contract (a schema, example payloads, the shared config file); see "Boundaries" below |
+| Older clients a newer side must still serve | Fixtures of the requests they send and the responses they expect, taken from the repo's history or the client's code at that release (never a live capture), passing until that release is retired |
+| The assembled product (a release build against a non-production environment) | A smoke-test script you may write but never run: it calls live services, so the developer runs it. It stays out of the default suite, and the report lists it as not verified |
 | A user flow in a web UI (keyboard paths, error states, focus) | Browser test (e.g. Playwright) against the real page, network mocked per route |
 | Code that runs inside a host application (an editor plugin, an extension) | Unit tests against a small fake of the host SDK, covering only the calls the code makes |
 | Rendering, screen readers, real devices, the host application itself | A short manual checklist in the repo's `docs/` |
@@ -37,6 +47,27 @@ CI workflows) first; they override anything generic here.
 Fake at the seam the code already has. For model calls, that's the
 client the driver passes to the agent (decision 0002). Never fake the
 unit under test.
+
+### Boundaries
+
+- **One source of the contract.** The provider's tests check it
+  produces what the contract says; the consumer's tests feed it the
+  same examples. A fake on one side that the other side never checks
+  is a guess, not a contract test.
+- **Across repos,** a test compares each copy with the source: a
+  vendored schema, a duplicated settings file, a client's expected
+  response. When the sibling checkout isn't present the test skips
+  with a reason that names what wasn't checked; it never passes
+  silently. A skip that always happens in CI leaves the boundary
+  unpinned: have CI check out the sibling or test against a vendored
+  copy of the contract, and if neither is possible, say so in the
+  report.
+- **Both directions.** A change to the provider runs the consumer's
+  contract tests, and the reverse. If you can't run the other side,
+  say so in the report as untested.
+- **Compatibility is pinned, not assumed.** Fields added are
+  optional for older clients; fields removed or renamed break a
+  pinned fixture first.
 
 ## Step 3: Rules for every test
 
@@ -80,7 +111,8 @@ modified.
 
 ## Step 6: Report
 
-- What's covered now: behaviour → test, per surface.
+- What's covered now: behaviour → test, per surface, and each
+  boundary with the tests that pin it on each side.
 - Proof of failure: which deliberate break turned which test red.
 - Commands run and their result (counts, run time).
 - What's still untested and why, plus the manual checklist.

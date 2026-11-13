@@ -59,8 +59,11 @@ relative to this skill's base directory); read it before the first edit.
 
 Spawn `noemeo-test-engineer` for every behaviour the change adds or
 alters that no existing test would catch. Give it:
-- the repo's absolute path and branch;
-- the behaviours to cover;
+- every repo's absolute path and branch, as one task when the change
+  spans several;
+- the behaviours to cover, and each boundary the change crosses (an
+  API, a file or config format, settings kept in step across repos,
+  older clients still supported), with who is on the other side;
 - what may not be touched (real data, paid calls, secrets).
 
 It writes tests only, proves each can fail, and wires them into the
@@ -70,13 +73,17 @@ Skip it only for a change with no behaviour to test (documentation,
 configuration text), and say so in the PR.
 
 **Exit:** the new tests pass and the agent has shown they fail without
-the change.
+the change; each boundary the change crosses is pinned on both sides,
+or the gap is named for the PR's test plan. A smoke test against a
+live environment is never the agent's to run: it goes in the test plan
+for the user.
 
 ## 5. Review: noemeo-code-reviewer
 
 - Spawn `noemeo-code-reviewer` on the branch against its PR base, naming
   each repo by absolute path. Give it:
-  - what the change is for and the risky parts to probe;
+  - what the change is for and the risky parts to probe, including
+    each boundary it crosses and where the other side lives;
   - what it may not do (paid calls, AWS calls, secrets).
 - An access change also gets `noemeo-iam-review`: when the diff touches
   an `aws_iam_*` resource, a policy document, a trust policy, or a
