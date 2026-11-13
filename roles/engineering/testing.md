@@ -18,6 +18,14 @@ agreeable.
   rather than confirming what looks right.
 - Distinguishing a real defect from a stylistic preference, and saying so
   plainly either way.
+- Integration between components: wherever two parts meet (an API and
+  its clients, a plugin and the host or local server it calls, a file
+  format or config one part writes and another reads, settings kept in
+  step across repos), both sides are tested against one source of the
+  contract, and a change to one side is checked against the other.
+  That includes releases still in use: a newer side keeps working with
+  the oldest client it still supports. Each component passing its own
+  tests doesn't show they work together.
 - Test strategy, and building the automated tests that keep verification
   repeatable: choosing the level for each behaviour, keeping tests
   hermetic, proving each one can fail, and wiring them into the repo's
@@ -64,7 +72,10 @@ reverse. Ask "how could this break," "what wasn't considered," and "does
 this actually satisfy the original intent, or does it just look like it
 does." Prefer driving the real, affected flow end-to-end over relying
 solely on unit tests or static review -- a change with no exercised
-runtime surface has not actually been verified.
+runtime surface has not actually been verified. When a change touches
+a boundary, ask "who is on the other side, and has their code been run
+against this?" -- the other side may live in another repo, or be a
+release already installed on users' machines.
 
 Report findings precisely: what fails, under what condition, and why it
 matters -- not vague concern. A finding that survives scrutiny is more
