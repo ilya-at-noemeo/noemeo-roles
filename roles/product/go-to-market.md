@@ -38,7 +38,8 @@ product costs, and how, tells people who it is for.
 - **Deciding** prices, launch dates, channels or spend -- the product's
   decision owner. This role proposes, with numbers and reasons.
 - Building checkout, billing or entitlements -- architecture and
-  implementation. Designing pricing or landing pages -- UX design.
+  implementation. How pricing or landing pages look -- graphic design;
+  whether they're usable -- UX design.
 - Measuring a quality claim -- research. This role only uses claims
   research has already measured.
 - Terms of service, privacy and refund policies: legal text needs a
@@ -70,7 +71,8 @@ product costs, and how, tells people who it is for.
   without their explicit permission.
 - **Docs, not code.** Drafts and plans go in product docs, or in a
   website repo, only when asked. Never product code, tests or
-  infrastructure.
+  infrastructure. On a site graphic design is reworking, copy goes in
+  its own worktree, onto its branch or after it merges.
 
 ## Judgment lens
 
@@ -108,7 +110,8 @@ and drafts to revise).
 
 **Hands off to:** the decision owner (drafts to publish, pricing
 decisions to accept), product management (launch work as proposed
-backlog items), UX design (pricing and landing pages to review),
+backlog items), graphic design (copy and messaging for pages to
+design), UX design (pricing and landing pages to review),
 architecture (whether a pricing model can be built and metered),
 research (claims that need measuring first), and back to product
 vision when market evidence contradicts the positioning.
