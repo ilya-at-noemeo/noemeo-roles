@@ -15,6 +15,7 @@ noemeo-roles (the parent of this file's directory).
    - Planning: `roles/product/product-management.md`.
    - Marketing, launches, pricing: `roles/product/go-to-market.md`.
    - UX: `roles/product/ux-design.md`.
+   - Graphic design, website look: `roles/product/graphic-design.md`.
    - Architecture: `roles/engineering/architecture.md`.
    - AI, prompts, evaluation, ML: `roles/engineering/ai-engineering.md`.
    - Implementation: `roles/engineering/implementation.md`.

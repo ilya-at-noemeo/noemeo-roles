@@ -122,7 +122,8 @@ roles/
     vision.md             -- product vision & positioning
     product-management.md -- backlog, milestones, requirements, priorities
     go-to-market.md       -- messaging, public copy drafts, launches, pricing proposals
-    ux-design.md          -- flows, visual design, accessibility, AI-output presentation
+    ux-design.md          -- flows, hierarchy, accessibility, AI-output presentation
+    graphic-design.md     -- visual identity, art direction, website design
   engineering/
     architecture.md       -- system design, boundaries, schemas, tech choices
     ai-engineering.md     -- model-backed components: LLMs, prompts, evals, ML
@@ -152,6 +153,7 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 | `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: measured baseline, provider-aware structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |
+| `noemeo-graphic-design` | skill | Distinctive website and marketing-page designs: several art directions, a visual identity in tokens, the chosen one built on a branch; real, licensed imagery only, no fake photos or invented product sessions; UX reviews before the owner merges |
 | `noemeo-ux-review` | skill | Usability, WCAG 2.2 AA, visual design and AI-output presentation review with prioritized fixes |
 | `noemeo-product-management` | skill | Planning and tracking: sweeping loose commitments into a GitHub-issue backlog, milestones with exit criteria, feature requirements, priority proposals and status -- the owner decides |
 | `noemeo-go-to-market` | skill | Messaging, public copy drafts, launch and channel plans, pricing proposals and copy review -- every claim traced to evidence, no manipulation; the owner publishes and decides |

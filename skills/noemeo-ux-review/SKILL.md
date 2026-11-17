@@ -1,6 +1,6 @@
 ---
 name: noemeo-ux-review
-description: Reviews a Noemeo user interface -- a page, component, flow, plugin dialog or design mock -- for usability, accessibility (WCAG 2.2 AA), visual design and honest presentation of AI output, grounded in Noemeo's principles, and returns prioritized, evidence-backed fixes with concrete code suggestions. Use when asked to review, critique or audit UI/UX, check accessibility, evaluate a design or screenshot, or improve how a screen presents AI suggestions.
+description: Reviews a Noemeo user interface -- a page, component, flow, plugin dialog or design mock -- for usability, accessibility (WCAG 2.2 AA), visual hierarchy and legibility, and honest presentation of AI output, grounded in Noemeo's principles, and returns prioritized, evidence-backed fixes with concrete code suggestions. Use when asked to review, critique or audit UI/UX, check accessibility, evaluate a design or screenshot, or improve how a screen presents AI suggestions. Not for a website's look or art direction (noemeo-graphic-design).
 ---
 
 # Noemeo UX review
@@ -63,6 +63,9 @@ fonts, generic gradients, three identical cards) when they make the
 product forgettable, but treat brand rules as authoritative. Flag
 trendy-but-harmful patterns (low-contrast glass effects, tiny text,
 parallax that hurts reading). Keep aesthetic opinions labelled as such.
+On a design the graphic design role leads (a website, a visual
+identity), its look is that role's call: report what harms reading or
+use, with evidence, and leave the rest as `Taste` notes for it.
 
 ## Step 6: Report
 
