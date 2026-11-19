@@ -210,6 +210,34 @@ class StopLint(HookCase):
         self.assertEqual(out["decision"], "block")
         self.assertIn("Tests are failing", out["reason"])
 
+    def test_an_internal_lint_failure_does_not_block_and_is_named_on_stderr(self) -> None:
+        # a copy of the hooks whose decisions module fails inside load()/lint_corpus()
+        hooks = self.repo.parent / "hooks-broken"
+        hooks.mkdir()
+        for name in ("stop_tests.py", "decisions_format.py"):
+            (hooks / name).write_text((HOOK.parent / name).read_text())
+        (hooks / "decisions.py").write_text(
+            "class Corpus:\n    pass\n\n"
+            "def load(project):\n    raise RuntimeError('boom')\n\n"
+            "def lint_corpus(corpus, project):\n    raise RuntimeError('boom')\n"
+        )
+        self.install_stub(exit_code=0)
+        self.with_duplicate_ids()
+        proc = subprocess.run(
+            [sys.executable, str(hooks / "stop_tests.py")],
+            input=json.dumps({"session_id": "s1", "stop_hook_active": False}),
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.repo)),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if proc.stdout.strip():
+            self.assertNotEqual(json.loads(proc.stdout).get("decision"), "block")
+        lines = [ln for ln in proc.stderr.splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 1, proc.stderr)
+        self.assertIn("decisions", lines[0])
+        self.assertIn("lint", lines[0])
+
 
 if __name__ == "__main__":
     unittest.main()

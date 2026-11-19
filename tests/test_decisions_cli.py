@@ -376,6 +376,56 @@ class ResolveCli(CliCase):
         self.assertIn(second[:7], "\n".join(by_id["acme-second"]))
         self.assertNotIn(second[:7], "\n".join(by_id["acme-first"]))
 
+    def branch_with_scopes(self):
+        """main holds lib/ and other/ files with a decision each; feature is checked out."""
+        self.write("docs/decisions/lib.md", record("acme-lib", paths=["lib/**"]))
+        self.write("docs/decisions/other.md", record("acme-other", paths=["other/**"]))
+        self.write("lib/x.py", "x = 1\n")
+        self.write("other/x.py", "x = 1\n")
+        git(self.acme, "add", "-A")
+        git(self.acme, "commit", "-q", "-m", "scopes")
+        git(self.acme, "branch", "-M", "main")
+        git(self.acme, "checkout", "-q", "-b", "feature")
+
+    def test_diff_includes_uncommitted_edits_to_tracked_files(self):
+        self.write("src/app.py", "print('edited, not committed')\n")
+        proc = self.cli("resolve", "--diff", "HEAD")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("acme-1", proc.stdout)
+
+    def test_diff_covers_committed_and_uncommitted_changes_on_a_branch(self):
+        self.branch_with_scopes()
+        self.write("lib/x.py", "x = 2\n")
+        git(self.acme, "add", "-A")
+        git(self.acme, "commit", "-q", "-m", "change lib")
+        self.write("other/x.py", "x = 3\n")  # tracked, uncommitted
+        proc = self.cli("resolve", "--diff", "main")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("acme-lib", proc.stdout)
+        self.assertIn("acme-other", proc.stdout)
+        self.assertNotIn("acme-1", proc.stdout)  # src/app.py is unchanged
+
+    def test_diff_with_nothing_changed_resolves_nothing(self):
+        self.branch_with_scopes()
+        proc = self.cli("resolve", "--diff", "main")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertNotIn("acme-", proc.stdout)
+
+    def test_diff_finds_untracked_files_when_the_project_is_a_subdirectory(self):
+        sub = self.acme / "sub"
+        (sub / ".claude").mkdir(parents=True)
+        (sub / ".claude" / "noemeo-guard.json").write_text(
+            json.dumps({"decision_roots": ["docs/decisions"]})
+        )
+        self.write("sub/docs/decisions/sd.md", record("acme-sub", paths=["sub/src/**"]))
+        self.write("sub/src/old.py", "a = 1\n")
+        git(self.acme, "add", "-A")
+        git(self.acme, "commit", "-q", "-m", "sub")
+        self.write("sub/src/new.py", "b = 2\n")  # untracked, under the subdirectory
+        proc = self.cli("resolve", "--diff", "HEAD", env_project=sub)
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn("acme-sub", proc.stdout)
+
 
 if __name__ == "__main__":
     unittest.main()
