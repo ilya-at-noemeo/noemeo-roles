@@ -87,27 +87,48 @@ def dispatch(event):
         projects = list(dict.fromkeys([project, project_dir(cwd)]))
         if name == "apply_patch":
             command = data.get("command", data.get("input", ""))
-            for path in patch_paths(command):
-                output = guard({**event, "tool_name": "Write",
-                               "tool_input": {"file_path": path}}, cwd, projects)
+            writes = [{**event, "tool_name": "Write", "tool_input": {"file_path": path}}
+                      for path in patch_paths(command)]
+            # Every path passes the guard before any delivery is spent.
+            for write in writes:
+                output = guard(write, cwd, projects)
+                if denied(output):
+                    return output
+            for write in writes:
+                output = run("decision_delivery.py", write, cwd, project)
                 if denied(output):
                     return output
             return None
         output = guard(event, cwd, projects)
         if denied(output):
             return output
+        if name in ("Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"):
+            # Its own failure is a systemMessage, which is not a denial.
+            output = run("decision_delivery.py", event, cwd, project)
+            if denied(output):
+                return output
         if name == "Bash":
             return run("review_gate.py", event, cwd, project)
     if kind == "PostToolUse" and name in ("apply_patch", "Write", "Edit", "MultiEdit"):
         paths = patch_paths(data.get("command", data.get("input", ""))) if name == "apply_patch" else [data.get("file_path", "")]
+        tool = "Write" if name == "apply_patch" else name
         messages = []
+        notices = []
         for path in paths:
             path = str((cwd / path).resolve())
+            file_event = {**event, "tool_name": tool, "tool_input": {"file_path": path}}
             output = run("ruff_touched_file.sh", {**event, "tool_input": {"file_path": path}}, cwd, project)
             if output:
                 messages.append(output.get("reason") or output.get("systemMessage", ""))
+            output = run("decision_delivery.py", file_event, cwd, project)
+            if output and output.get("decision") == "block":
+                messages.append(output.get("reason", ""))
+            elif output and output.get("systemMessage"):
+                notices.append(output["systemMessage"])
         if messages:
             return {"decision": "block", "reason": "\n".join(messages)}
+        if notices:
+            return {"systemMessage": "\n".join(notices)}
     if kind == "Stop":
         return run("stop_tests.py", event, cwd, project, 290)
     if kind == "SubagentStop":

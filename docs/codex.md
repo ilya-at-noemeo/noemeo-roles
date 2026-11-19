@@ -83,6 +83,35 @@ Before relying on enforcement, verify in a fresh trusted session:
 5. In an opted-in fixture, confirm patch edits run ruff and a failing test
    causes a Stop continuation.
 
+## Decisions
+
+The adapter runs `hooks/decision_delivery.py` on PreToolUse after the
+guard and before the review gate: a binding decision in scope denies
+the first shell command or edit once, with its text, and the retry
+passes. `apply_patch` is checked once per patched path as a `Write`; the
+first denial is returned. A guard denial returns before delivery runs,
+so it doesn't use up a delivery. On PostToolUse after `apply_patch`,
+`Write`, `Edit` and `MultiEdit`, decision feedback is merged with
+ruff's messages into one block reason. A delivery failure prints a
+system message and never denies.
+
+Gaps:
+
+- Codex has no Read tool. Files read through the shell get no
+  descriptive (post-read) delivery; only binding decisions scoped to a
+  command or an edit reach the model.
+- Whether Codex events carry an agent id is unconfirmed. If they don't,
+  subagents share the session's delivery state, so a decision delivered
+  to the main agent isn't repeated to a subagent.
+- Pending manual check, run by the owner in a real Codex session:
+  `python3 codex/install.py /path/to/disposable-repo` in a repo with
+  one binding decision (`paths: ["src/**"]`) and `decision_roots`
+  in `.claude/noemeo-guard.json`; trust the hooks in `/hooks`; start a
+  fresh session and ask for an `apply_patch` edit under `src/`. Expect
+  the first to be refused with the decision's text and the retry to go
+  through; also check whether the event carries an agent id. Result:
+  not yet run.
+
 Adapter regression tests exercise recorded/synthetic events locally. They
 do not establish that the desktop runtime has loaded or trusted hooks.
 Current source documentation:
