@@ -413,9 +413,12 @@ def _git_out(project: Path, *args: str) -> str:
 
 def _diff_paths(project: Path, base: str) -> list[Path]:
     top = Path(_git_out(project, "rev-parse", "--show-toplevel").strip())
-    changed = _git_out(project, "diff", "--name-only", "-z", f"{base}...").split("\0")
-    untracked = _git_out(project, "ls-files", "-o", "--exclude-standard", "-z").split("\0")
-    return [top / n for n in dict.fromkeys(changed + untracked) if n]
+    changed = _git_out(project, "diff", "--name-only", "--no-relative", "-z", f"{base}...").split("\0")
+    edited = _git_out(project, "diff", "--name-only", "--no-relative", "-z", "HEAD").split("\0")
+    untracked = _git_out(
+        project, "ls-files", "-o", "--exclude-standard", "--full-name", "-z"
+    ).split("\0")
+    return [top / n for n in dict.fromkeys(changed + edited + untracked) if n]
 
 
 def _last_commit(d: Decision) -> str:

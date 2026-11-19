@@ -82,13 +82,18 @@ def lint_errors() -> list[str]:
     An internal failure never blocks the stop."""
     try:
         config = json.loads((Path(".claude") / "noemeo-guard.json").read_text())
-        if not config.get("decision_roots"):
-            return []
+        has_roots = bool(config.get("decision_roots"))
+    except (OSError, ValueError, AttributeError):
+        return []
+    if not has_roots:
+        return []
+    try:
         import decisions
 
         errors, _warnings = decisions.lint_corpus(decisions.load(Path.cwd()), Path.cwd())
         return errors
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        print(f"decisions lint failed internally ({e!r}); run decisions.py lint", file=sys.stderr)
         return []
 
 
