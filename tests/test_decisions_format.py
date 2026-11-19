@@ -194,6 +194,16 @@ class ParseMarker(TempCase):
         self.assertNotIn("kind: architecture", d.text)  # marker not delivered
         self.assertEqual(len(d.version), 12)
 
+    def test_comment_line_inside_marker_is_not_a_heading(self):
+        text = MARKER.replace("binding: false\n", "binding: false\n# a comment line\n")
+        decisions, errors = parse_file(self.write("arch.md", text))
+        self.assertEqual(errors, [])
+        d = decisions[0]
+        self.assertEqual(d.heading, "Boundaries")
+        self.assertIn("body", d.text)
+        self.assertIn("more", d.text)
+        self.assertNotIn("not included", d.text)
+
     def test_two_markers_in_one_file(self):
         text = MARKER.replace(
             "## Next\nnot included\n",
@@ -227,7 +237,7 @@ class Errors(TempCase):
         self.assertIn("status", messages)
 
     def test_missing_required_field_is_an_error(self):
-        for field in ("id", "kind", "status", "binding", "summary"):
+        for field in ("kind", "status", "binding", "summary"):
             with self.subTest(field=field):
                 lines = [
                     ln for ln in RECORD.split("\n") if not ln.startswith(field + ":")
@@ -238,6 +248,12 @@ class Errors(TempCase):
                 self.assertEqual(len(errors), 1)
                 self.assertIn(field, errors[0].message)
                 self.assertEqual(errors[0].path, p)
+
+    def test_front_matter_without_id_is_not_a_decision(self):
+        text = "---\nname: widget-guide\ndescription: How to use widgets\n---\n# Widgets\n\n## How to apply\nText.\n"
+        self.assertEqual(parse_file(self.write("guide.md", text)), ([], []))
+        no_id = "\n".join(ln for ln in RECORD.split("\n") if not ln.startswith("id:"))
+        self.assertEqual(parse_file(self.write("no-id.md", no_id)), ([], []))
 
     def test_unknown_key_is_an_error(self):
         text = RECORD.replace("binding: true", "binding: true\npaht: [src/**]")
