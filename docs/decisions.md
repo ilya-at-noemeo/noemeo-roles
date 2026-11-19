@@ -60,7 +60,7 @@ scope. A decision with an error is dropped and the error is reported.
 | `commands` | Scope: patterns matched against each shell command in a call (`*` is a wildcard; leading `VAR=value` and `sudo` are ignored). |
 | `tasks` | Scope: task kinds such as `design`, `review`, `release`, `naming`. |
 | `always` | Scope: `true` for the few decisions that apply everywhere. |
-| `depends_on` | Ids this decision relies on. They are delivered with it. |
+| `depends_on` | Ids this decision relies on. Not delivered to the model with it; `resolve` includes them, `deps` lists dependents and `lint` checks the links. |
 | `supersedes` | Ids this decision replaces entirely. |
 | `amends` | Ids this decision changes in part. The original stays current. |
 | `origin` | Where it was settled: session date and topic, PR, research note. |
@@ -140,7 +140,7 @@ python3 hooks/decisions.py [--project DIR] <command>
 | Command | Does |
 | --- | --- |
 | `index` | Prints the index. |
-| `resolve [--path P] [--command C] [--task T] [--diff BASE] [--commits]` | Decisions in scope, with those they depend on and amendments. `--diff` takes the paths changed since BASE, plus untracked; `--commits` adds each source's last commit. |
+| `resolve [--path P] [--command C] [--task T] [--diff BASE] [--commits]` | Decisions in scope, with their amendments, plus the current decisions they depend on (transitively), each labelled as a dependency of the decision that needs it. This is the review's input; delivery to the model follows amendments, not `depends_on`. `--diff` takes the paths changed since BASE, plus untracked; `--commits` adds each source's last commit. |
 | `deps ID` | Decisions that depend on or amend ID. |
 | `show ID` | A decision, whatever its status. |
 | `lint` | Checks the corpus. Exit 0 when there are no errors; warnings are printed. |

@@ -441,8 +441,25 @@ def _cmd_resolve(corpus: Corpus, project: Path, args) -> int:
             print(f"cannot diff against {args.diff}: {e}", file=sys.stderr)
             return 1
     found = resolve(corpus, paths=paths, commands=args.command, tasks=args.task)
+    # The review's input also holds what the decisions in scope rely on
+    # (current ones only); delivery to the model doesn't follow depends_on.
+    by_id = {d.id: d for d in corpus.decisions if d.status in CURRENT}
+    labels: dict[int, str] = {}
+    shown = {id(d) for d in found}
+    queue = list(found)
+    while queue:
+        d = queue.pop(0)
+        for dep_id in d.depends_on:
+            dep = by_id.get(dep_id)
+            if dep is not None and id(dep) not in shown:
+                shown.add(id(dep))
+                labels[id(dep)] = d.id
+                found.append(dep)
+                queue.append(dep)
     for d in found:
         head = f"## {d.id}  version {d.version}"
+        if id(d) in labels:
+            head += f"  (dependency of {labels[id(d)]})"
         if args.commits:
             head += f"  commit {_last_commit(d)}"
         print(f"{head}  source {_display(d.source, project)}")

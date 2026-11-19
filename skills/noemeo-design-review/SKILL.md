@@ -32,8 +32,9 @@ python3 <noemeo-roles>/hooks/decisions.py --project <repo> \
 
 `<base>` is the base from Step 1. Add `--task <kind>` for each other
 task kind the change falls under (`design`, `release`, ...). The output
-is the decisions in scope for the changed paths, with the decisions they
-depend on and amendments, each with its version. Check the change
+is the decisions in scope for the changed paths, with their amendments
+and the current decisions they depend on (labelled as dependencies),
+each with its version. Check the change
 against these in Step 3. Then read what the resolver can't know: the
 repo's `CLAUDE.md` (and any nested one in the directories the target
 touches). If the target spans repos, resolve in each repo that
