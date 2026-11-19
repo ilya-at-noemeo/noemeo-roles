@@ -724,6 +724,32 @@ Settled before it starts (owner, 2026-11-19):
   repo's `CLAUDE.md` and `AGENTS.md`; with the owner, classify each as
   (a) already a decision, (b) to become a decision, or (c) orientation
   that stays.
+- [ ] **Step 3b: Inventory the design documents,** one at a time with
+  the owner, starting with the one an open PR changes. A design document
+  mixes settled rules with how they're built, so it is never delivered
+  whole. Classify each settled statement:
+  - already a decision: the document refers to it by id;
+  - an owner choice settled only in the document (an "owner" and a
+    date in a table or an open-questions list): becomes a new record,
+    or its section is annotated in place when the section holds that
+    rule and nothing else;
+  - a measured fact: a finding record once the owner confirms it where
+    it matters (e.g. on the live account, not only a sandbox); until
+    then it stays in the document, marked unconfirmed, or is recorded
+    with `status: open` saying what's missing;
+  - design (how it's built: mappings to a provider's fields, schemas,
+    flows), sketches and open questions: stay in the document.
+
+  The rule is stated in its own terms, not in one implementation's
+  ("a full refund removes the pass", not "type `full` removes the
+  pass"): review then checks code against the rule, and a provider
+  that encodes the rule differently shows up as a defect.
+
+  This step only classifies. The new records and annotated sections
+  join the list Step 3a orders and Step 4 annotates, each with the
+  owner's approval. Once a new record is accepted, the document's
+  sentence is replaced by a reference to its id, as Step 5 does for
+  instruction files.
 - [ ] **Step 3a: Order the annotation.** `lint` reports an unknown id in
   `depends_on`, `supersedes` or `amends` as an error, so a record can
   name only records already annotated. From the references in the
