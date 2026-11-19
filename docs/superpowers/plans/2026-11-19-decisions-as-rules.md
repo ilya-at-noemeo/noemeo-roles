@@ -700,15 +700,31 @@ Task 7's PR is merged and the plugin's installed copy is updated
   architecture and product documents, and the sibling generic decision
   log. Start a session; confirm the index appears and lists every record
   as unannotated.
-- [ ] **Step 2: Annotate one record at a time.** With the noemeo-decisions
+- [ ] **Step 2: Measure the baseline**: the size in tokens of the
+  repo's `CLAUDE.md` and of the session-start context, before any
+  change below.
+- [ ] **Step 3: Inventory the instruction files.** List each rule in the
+  repo's `CLAUDE.md` and `AGENTS.md`; with the owner, classify each as
+  (a) already a decision, (b) to become a decision, or (c) orientation
+  that stays.
+- [ ] **Step 4: Annotate one record at a time.** With the noemeo-decisions
   skill, draft front matter for one record (scope, kind, binding), show
   it to the owner, and set `accepted` only after the owner approves.
   Run `lint`. Commit each approved record on its own.
-- [ ] **Step 3: Check delivery live**: one edit and one command in the
+- [ ] **Step 5: Replace restated rules with references.** For each (a)
+  or (b) rule whose decision is accepted, replace the instruction-file
+  text with a one-line reference by id, and rewrite numbered
+  references ("decision 0008") to ids. Edit `AGENTS.md` only with the
+  owner's go.
+- [ ] **Step 6: Check delivery live**: one edit and one command in the
   scope of an accepted binding decision are refused once with its text,
   then go through.
-- [ ] **Step 4: PR** after noemeo-code-reviewer's Ready verdict, when
+- [ ] **Step 7: Measure again**: the same two sizes as Step 2.
+- [ ] **Step 8: PR** after noemeo-code-reviewer's Ready verdict, when
   the owner asks.
+
+Exit criterion: `lint` is clean on the instruction files (no errors, no
+numbered-reference warnings).
 
 The replay measurement (spec, "Measurement") is a separate study run
 with noemeo-researcher once enough records are annotated; it doesn't

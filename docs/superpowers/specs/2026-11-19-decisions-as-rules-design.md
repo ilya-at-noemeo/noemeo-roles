@@ -321,6 +321,19 @@ The design review is the exception: it records the ids and versions it
 checked. Opening a decision file shows its front matter, which is the
 agent's choice and keeps files editable by hand.
 
+### Instruction files (owner's decision)
+
+`CLAUDE.md` and `AGENTS.md` load in full every session, framed as
+overriding defaults; decisions arrive later as hook context. So an
+instruction file that repeats or contradicts a decision, or still cites
+a superseded one, wins over it. One home per rule: a rule lives only in
+its decision; an instruction file may refer to it by id but never
+restate it, and keeps only orientation (what the repo is, layout,
+build and test commands, hazards that aren't decisions, where decisions
+live). `lint` checks the ids instruction files mention (a superseded,
+retired or rejected one is an error; proposed or open, or a bare
+"decision 0008", a warning); restatement is caught in review.
+
 ### Write path
 
 1. **Capture in the session.** A skill (or an addition to an existing
