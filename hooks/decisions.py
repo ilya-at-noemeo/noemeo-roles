@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Decisions as rules: load knowledge roots, match scope, resolve, index.
 
 Library part only. A decision's scope comes from its own fields, never
@@ -8,9 +9,12 @@ is the nearest ancestor holding `.git`, looked up once per directory.
 
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import re
+import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -310,3 +314,195 @@ def render_index(corpus: Corpus, budget: int = 6000) -> str:
         kept.append(line)
         size += 1 + len(line)
     return "\n".join([*head, *kept, note.format(len(cuttable) - len(kept))])
+
+
+# ---------------------------------------------------------------- lint
+
+_NUMBERED_RECORD = re.compile(r"\d{4}-.*\.md")
+
+
+def _tracked_files(directory: Path, cache: dict) -> tuple[str, set[str]] | None:
+    """(top level, repo-relative files tracked or not ignored) for the repo
+    holding `directory`; None when Git can't say."""
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(directory), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+        if top not in cache:
+            names = subprocess.run(
+                ["git", "-C", top, "ls-files", "--cached", "--others", "--exclude-standard", "-z"],
+                capture_output=True, text=True, check=True,
+            ).stdout.split("\0")
+            cache[top] = {n for n in names if n}
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return top, cache[top]
+
+
+def lint_corpus(corpus: Corpus, project: Path) -> tuple[list[str], list[str]]:
+    """(errors, warnings) as plain messages, without an `error:` prefix."""
+    project = Path(project)
+    errors: list[str] = []
+    warnings: list[str] = []
+    where = lambda d: _display(d.source, project)  # noqa: E731
+
+    for e in corpus.errors:
+        errors.append(f"{_display(e.path, project)}:{e.line}: {e.message}")
+    for root in corpus.missing_roots:
+        warnings.append(f"configured decision root not found: {root}")
+
+    by_id: dict[str, list[Decision]] = {}
+    for d in corpus.decisions:
+        by_id.setdefault(d.id, []).append(d)
+    for id, found in sorted(by_id.items()):
+        if len(found) > 1:
+            files = ", ".join(sorted({where(d) for d in found}))
+            errors.append(f"duplicate id {id} in {files}")
+
+    for d in corpus.decisions:
+        for field_name in ("depends_on", "supersedes", "amends"):
+            for target in getattr(d, field_name):
+                if target not in by_id:
+                    errors.append(f"{where(d)}: {d.id} {field_name} unknown decision {target}")
+        if d.status in CURRENT:
+            for target in d.depends_on:
+                for t in by_id.get(target, []):
+                    if t.status in ("superseded", "retired"):
+                        errors.append(
+                            f"{where(d)}: {d.id} is current but depends on {t.status} {target}"
+                        )
+        if d.status in ("superseded", "retired", "rejected"):
+            for target in d.amends:
+                for t in by_id.get(target, []):
+                    if t.status in CURRENT:
+                        warnings.append(
+                            f"{where(t)}: {t.id} is amended by {d.id}, which is {d.status}"
+                        )
+
+    for path, _title in corpus.background:
+        if _NUMBERED_RECORD.fullmatch(path.name):
+            warnings.append(f"{_display(path, project)}: record has no front matter")
+
+    cache: dict = {}
+    for d in corpus.decisions:
+        if not d.summary.strip():
+            warnings.append(f"{where(d)}: {d.id} has an empty summary")
+        if not d.text.strip():
+            warnings.append(f"{where(d)}: {d.id} has no delivered text")
+        if d.paths and d.repo != "*":
+            tracked = _tracked_files(d.source.parent, cache)
+            if tracked is None:
+                continue
+            top, files = tracked
+            if d.repo and Path(top).name != d.repo:
+                continue  # names another checkout; can't be checked from here
+            if not any(glob_match(p, f) for p in d.paths for f in files):
+                warnings.append(f"{where(d)}: {d.id} paths match no tracked file")
+    return errors, warnings
+
+
+# ---------------------------------------------------------------- command line
+
+
+def _git_out(project: Path, *args: str) -> str:
+    return subprocess.run(
+        ["git", "-C", str(project), *args], capture_output=True, text=True, check=True
+    ).stdout
+
+
+def _diff_paths(project: Path, base: str) -> list[Path]:
+    top = Path(_git_out(project, "rev-parse", "--show-toplevel").strip())
+    changed = _git_out(project, "diff", "--name-only", "-z", f"{base}...").split("\0")
+    untracked = _git_out(project, "ls-files", "-o", "--exclude-standard", "-z").split("\0")
+    return [top / n for n in dict.fromkeys(changed + untracked) if n]
+
+
+def _last_commit(d: Decision) -> str:
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(d.source.parent), "log", "-1", "--format=%h", "--", d.source.name],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        out = ""
+    return out or "uncommitted"
+
+
+def _cmd_resolve(corpus: Corpus, project: Path, args) -> int:
+    paths = [Path(p) if os.path.isabs(p) else project / p for p in args.path]
+    if args.diff:
+        try:
+            paths += _diff_paths(project, args.diff)
+        except (OSError, subprocess.CalledProcessError) as e:
+            print(f"cannot diff against {args.diff}: {e}", file=sys.stderr)
+            return 1
+    found = resolve(corpus, paths=paths, commands=args.command, tasks=args.task)
+    for d in found:
+        head = f"## {d.id}  version {d.version}"
+        if args.commits:
+            head += f"  commit {_last_commit(d)}"
+        print(f"{head}  source {_display(d.source, project)}")
+        print(d.text.strip())
+        print()
+    return 0
+
+
+def _cmd_show(corpus: Corpus, project: Path, args) -> int:
+    found = [d for d in corpus.decisions if d.id == args.id]
+    if not found:
+        print(f"unknown decision id: {args.id}", file=sys.stderr)
+        return 1
+    for d in found:
+        print(f"## {d.id} ({d.status})  source {_display(d.source, project)}")
+        print(f"summary: {d.summary}")
+        print(d.text.strip())
+        print()
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--project", default=argparse.SUPPRESS, help="project root")
+    parser = argparse.ArgumentParser(prog="decisions.py", description=__doc__, parents=[common])
+    sub = parser.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("index", parents=[common], help="print the index")
+    p = sub.add_parser("resolve", parents=[common], help="print decisions in scope")
+    p.add_argument("--path", action="append", default=[])
+    p.add_argument("--command", action="append", default=[])
+    p.add_argument("--task", action="append", default=[])
+    p.add_argument("--diff", metavar="BASE", help="paths changed since BASE, plus untracked")
+    p.add_argument("--commits", action="store_true", help="add each source's last commit")
+    p = sub.add_parser("deps", parents=[common], help="decisions that depend on or amend ID")
+    p.add_argument("id")
+    p = sub.add_parser("show", parents=[common], help="print a decision, whatever its status")
+    p.add_argument("id")
+    sub.add_parser("lint", parents=[common], help="check the corpus")
+    args = parser.parse_args(argv)
+
+    project = Path(getattr(args, "project", None) or os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
+    corpus = load(project)
+    if args.cmd == "index":
+        print(render_index(corpus))
+        return 0
+    if args.cmd == "resolve":
+        return _cmd_resolve(corpus, project, args)
+    if args.cmd == "deps":
+        ids = {
+            d.id for d in corpus.decisions if args.id in d.depends_on or args.id in d.amends
+        }
+        for id in sorted(ids):
+            print(id)
+        return 0
+    if args.cmd == "show":
+        return _cmd_show(corpus, project, args)
+    errors, warnings = lint_corpus(corpus, project)
+    for m in errors:
+        print(f"error: {m}")
+    for m in warnings:
+        print(f"warning: {m}")
+    return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

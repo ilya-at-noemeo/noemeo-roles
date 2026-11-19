@@ -29,6 +29,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
 TIMEOUT_S = 280  # under the hook's own 300s timeout
 
 
@@ -75,6 +77,21 @@ def warn_once(git_dir: Path, session_id: str, message: str) -> None:
     print(json.dumps({"systemMessage": message}))
 
 
+def lint_errors() -> list[str]:
+    """Decision lint errors, only when the repo configures `decision_roots`.
+    An internal failure never blocks the stop."""
+    try:
+        config = json.loads((Path(".claude") / "noemeo-guard.json").read_text())
+        if not config.get("decision_roots"):
+            return []
+        import decisions
+
+        errors, _warnings = decisions.lint_corpus(decisions.load(Path.cwd()), Path.cwd())
+        return errors
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def main() -> None:
     payload = json.load(sys.stdin)
     # Already blocked once this stop and Claude is still stopping: let it
@@ -89,6 +106,18 @@ def main() -> None:
         git_dir = Path(git("rev-parse", "--absolute-git-dir").strip())
     except (OSError, subprocess.CalledProcessError):
         return  # not a git repo
+    errors = lint_errors()
+    if errors:
+        print(
+            json.dumps(
+                {
+                    "decision": "block",
+                    "reason": "Decision lint failed (python3 hooks/decisions.py lint). "
+                    "Fix these before finishing:\n\n" + "\n".join(f"error: {e}" for e in errors),
+                }
+            )
+        )
+        return
     if not Path(".venv/bin/pytest").exists():
         if main_checkout_has_pytest():
             warn_once(
