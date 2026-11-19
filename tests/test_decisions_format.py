@@ -171,6 +171,16 @@ class ParseRecord(TempCase):
         d = only(parse_file(self.write("q.md", text)))
         self.assertEqual(d.tasks, ("a, b", "c"))
 
+    def test_inline_lists_strip_blanks_around_unquoted_items(self):
+        base = "---\nid: acme-9\nkind: policy\nstatus: accepted\nbinding: true\nsummary: s\n"
+        p = self.write("lists.md", base + "tasks: [design, review]\n"
+                       "commands: [aws *,  terraform *]\n---\n# T\n")
+        d = only(parse_file(p))
+        self.assertEqual(d.tasks, ("design", "review"))
+        self.assertEqual(d.commands, ("aws *", "terraform *"))
+        p = self.write("quoted.md", base + 'tasks: ["a, b", c]\n---\n# T\n')
+        self.assertEqual(only(parse_file(p)).tasks, ("a, b", "c"))
+
     def test_title_of(self):
         p = self.write("0001-acme.md", RECORD)
         self.assertEqual(title_of(p), "0001: Use the acme profile")

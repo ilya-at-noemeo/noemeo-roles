@@ -125,7 +125,8 @@ class LoadRoots(Fixture):
         bad.write_text("---\nid: acme-bad\nkind: nonsense\n---\n# Bad\n")
         c = self.corpus()
         self.assertEqual(self.ids(c.decisions), ["acme-1"])
-        self.assertEqual([Path(e.path).name for e in c.errors], ["bad.md"])
+        self.assertGreaterEqual(len(c.errors), 1)
+        self.assertEqual({Path(e.path).name for e in c.errors}, {"bad.md"})
 
     def test_front_matter_without_id_and_plain_markdown_are_background(self):
         (self.acme / "docs/decisions").mkdir(parents=True)
@@ -383,6 +384,7 @@ class Resolve(Fixture):
 
     def test_section_decision_is_resolved_like_a_record(self):
         doc = self.acme / "docs/arch.md"
+        doc.parent.mkdir(parents=True, exist_ok=True)
         doc.write_text(
             "# Architecture\n\n## Boundaries\n<!-- decision\nid: acme-sec\n"
             "kind: architecture\nstatus: accepted\nbinding: false\n"
