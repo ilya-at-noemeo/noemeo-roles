@@ -99,12 +99,18 @@ def _read(path: Path) -> list[str]:
 def _headings(lines: list[str], start: int = 0) -> list[tuple[int, int, str]]:
     """(index, level, text) of each heading, skipping fenced code."""
     found = []
-    fenced = False
+    fenced = in_marker = False
     for i in range(start, len(lines)):
+        if in_marker:
+            in_marker = lines[i].strip() != "-->"
+            continue
         if _FENCE.match(lines[i]):
             fenced = not fenced
             continue
         if fenced:
+            continue
+        if lines[i].strip() == "<!-- decision":
+            in_marker = True
             continue
         m = _HEADING.match(lines[i])
         if m:
@@ -317,6 +323,8 @@ def _parse_front_matter(
     close = next((i for i in range(1, len(lines)) if lines[i].strip() == "---"), None)
     if close is None:
         return [], [FormatError(path, 1, "front matter is not closed by '---'")], len(lines)
+    if not any(re.match(r"\s*id\s*:", ln) for ln in lines[1:close]):
+        return [], [], close + 1  # other front matter, not a decision
     fields, errors = _parse_fields(lines[1:close], 2, path, allow_deliver=True)
     deliver = fields.pop("deliver", (None, 0))[0]
     body = lines[close + 1 :]
