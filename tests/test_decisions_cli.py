@@ -283,6 +283,169 @@ class Lint(CliCase):
         self.assertEqual(decisions.lint_corpus(load(self.acme), self.acme), ([], []))
 
 
+class InstructionFileReferences(CliCase):
+    """Lint checks the decision ids that CLAUDE.md and AGENTS.md mention.
+
+    One home per rule: an instruction file may point at a decision by id,
+    never at one that is no longer current, and never by bare number.
+    """
+
+    def setUp(self):
+        super().setUp()
+        for id, status, extra in (
+            ("acme-0007", "superseded", {}),
+            ("acme-0008", "accepted", {"supersedes": ["acme-0007"]}),
+            ("acme-0009", "retired", {}),
+            ("acme-0010", "rejected", {}),
+            ("acme-0011", "proposed", {}),
+            ("acme-0012", "open", {}),
+            ("acme-0013", "temporary", {}),
+            ("0005", "accepted", {}),
+        ):
+            self.write(f"docs/decisions/{id}.md", record(id, status=status, **extra))
+        git(self.acme, "add", "-A")
+        git(self.acme, "commit", "-q", "-m", "more decisions")
+
+    def lint_notes(self, files):
+        proc = self.lint_with(files)
+        self.assertIn(proc.returncode, (0, 1), proc.stdout + proc.stderr)
+        return proc
+
+    def test_a_superseded_reference_is_an_error_naming_file_line_status_and_successor(self):
+        proc = self.lint_notes({"CLAUDE.md": "# Acme\n\nBuild with make.\nSee acme-0007 for hosting.\n"})
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn(
+            "error: CLAUDE.md:4: refers to acme-0007, which is superseded; superseded by acme-0008",
+            proc.stdout.splitlines(),
+        )
+
+    def test_superseded_without_a_current_successor_has_no_superseded_by_clause(self):
+        self.write("docs/decisions/acme-0014.md", record("acme-0014", status="superseded"))
+        proc = self.lint_notes({"CLAUDE.md": "See acme-0014.\n"})
+        self.assertIn("error: CLAUDE.md:1: refers to acme-0014, which is superseded", proc.stdout.splitlines())
+
+    def test_retired_and_rejected_references_are_errors(self):
+        proc = self.lint_notes({"CLAUDE.md": "acme-0009 here\nand acme-0010 there\n"})
+        self.assertEqual(proc.returncode, 1, proc.stdout)
+        self.assertIn("error: CLAUDE.md:1: refers to acme-0009, which is retired", proc.stdout.splitlines())
+        self.assertIn("error: CLAUDE.md:2: refers to acme-0010, which is rejected", proc.stdout.splitlines())
+
+    def test_proposed_and_open_references_are_warnings_not_errors(self):
+        proc = self.lint_notes({"CLAUDE.md": "acme-0011\nacme-0012\n"})
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn(
+            "warning: CLAUDE.md:1: refers to acme-0011, which is proposed, not accepted",
+            proc.stdout.splitlines(),
+        )
+        self.assertIn(
+            "warning: CLAUDE.md:2: refers to acme-0012, which is open, not accepted",
+            proc.stdout.splitlines(),
+        )
+        self.assertFalse(self.lines(proc, "error:"), proc.stdout)
+
+    def test_references_to_accepted_and_temporary_decisions_are_silent(self):
+        proc = self.lint_notes({"CLAUDE.md": "acme-1 acme-0008 acme-0013 acme-3\n"})
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertFalse(self.has_line(proc, "error:", "CLAUDE.md"), proc.stdout)
+        self.assertFalse(self.has_line(proc, "warning:", "CLAUDE.md"), proc.stdout)
+
+    def test_nested_agents_md_and_dot_claude_claude_md_are_checked(self):
+        proc = self.lint_notes({
+            "services/api/AGENTS.md": "x\nacme-0007\n",
+            ".claude/CLAUDE.md": "acme-0009\n",
+        })
+        self.assertTrue(
+            self.has_line(proc, "error:", "services/api/AGENTS.md:2: refers to acme-0007"), proc.stdout
+        )
+        self.assertTrue(
+            self.has_line(proc, "error:", ".claude/CLAUDE.md:1: refers to acme-0009"), proc.stdout
+        )
+
+    def test_an_id_inside_a_longer_token_is_not_a_reference(self):
+        text = "acme-00071 xacme-0007 acme-0007x acme-0007-b acme_0007 ACME-0007 acme-0007_\n"
+        proc = self.lint_notes({"CLAUDE.md": text})
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertFalse(self.has_line(proc, "error:", "CLAUDE.md"), proc.stdout)
+
+    def test_an_id_beside_punctuation_is_a_reference_even_in_a_code_span(self):
+        proc = self.lint_notes({"CLAUDE.md": "Why: (acme-0007), `acme-0007`.\n"})
+        self.assertTrue(self.has_line(proc, "error:", "CLAUDE.md:1: refers to acme-0007"), proc.stdout)
+
+    def test_a_decision_number_that_is_not_an_id_gets_one_warning_per_line(self):
+        proc = self.lint_notes({
+            "CLAUDE.md": "Why: decision 0008.\nSee decisions 0006 and 0016, and Decision 0017 too.\nplain\n",
+        })
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertIn(
+            'warning: CLAUDE.md:1: refers to a decision by number ("decision 0008"); '
+            "use its id so lint can check it",
+            proc.stdout.splitlines(),
+        )
+        on_line_2 = [ln for ln in self.lines(proc, "warning:") if "CLAUDE.md:2:" in ln]
+        self.assertEqual(len(on_line_2), 1, proc.stdout)
+        self.assertIn("by number", on_line_2[0])
+        self.assertFalse(self.has_line(proc, "warning:", "CLAUDE.md:3:"), proc.stdout)
+
+    def test_a_decision_number_equal_to_a_known_id_is_not_a_numbered_warning(self):
+        proc = self.lint_notes({"CLAUDE.md": "See decision 0005.\n"})
+        self.assertFalse(self.has_line(proc, "warning:", "by number"), proc.stdout)
+        self.assertFalse(self.has_line(proc, "error:", "CLAUDE.md"), proc.stdout)
+
+    def test_the_second_number_in_decisions_x_and_y_is_checked_too(self):
+        proc = self.lint_notes({"CLAUDE.md": "decisions 0005 and 0006\n"})
+        numbered = [ln for ln in self.lines(proc, "warning:") if "by number" in ln]
+        self.assertEqual(len(numbered), 1, proc.stdout)
+
+    def test_files_under_ignored_directories_are_not_read(self):
+        files = {
+            f"{d}/CLAUDE.md": "acme-0007\n"
+            for d in (".git/hooks", "node_modules/pkg", ".venv/lib", "venv/lib", "pkg/__pycache__")
+        }
+        proc = self.lint_notes(files)
+        self.assertEqual(proc.returncode, 0, proc.stdout)
+        self.assertFalse(self.has_line(proc, "error:", "refers to"), proc.stdout)
+
+    def test_an_untracked_agents_md_is_read_from_the_working_tree(self):
+        self.write("AGENTS.md", "acme-0007\n")
+        self.assertEqual(git(self.acme, "ls-files", "AGENTS.md"), "")
+        proc = self.cli("lint")
+        self.assertTrue(self.has_line(proc, "error:", "AGENTS.md:1: refers to acme-0007"), proc.stdout)
+
+    def test_an_unreadable_instruction_file_is_skipped_silently(self):
+        path = self.write("CLAUDE.md", "acme-0007\n")
+        path.chmod(0)
+        try:
+            if os.access(path, os.R_OK):
+                self.skipTest("file permissions not enforced (root?)")
+            proc = self.cli("lint")
+        finally:
+            path.chmod(0o644)
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(proc.stderr, "")
+
+    def test_without_decision_roots_lint_does_not_read_instruction_files(self):
+        (self.acme / ".claude" / "noemeo-guard.json").write_text("{}")
+        before = self.cli("lint")
+        self.write("CLAUDE.md", "acme-0007 and decision 0008\n")
+        after = self.cli("lint")
+        self.assertEqual((after.returncode, after.stdout), (before.returncode, before.stdout))
+        self.assertNotIn("refers to", after.stdout)
+
+    def test_lint_corpus_returns_instruction_file_findings_as_plain_strings(self):
+        self.write("CLAUDE.md", "acme-0007\nacme-0011\ndecision 0016\n")
+        errors, warnings = decisions.lint_corpus(load(self.acme), self.acme)
+        self.assertIn("CLAUDE.md:1: refers to acme-0007, which is superseded; superseded by acme-0008", errors)
+        self.assertIn("CLAUDE.md:2: refers to acme-0011, which is proposed, not accepted", warnings)
+        self.assertTrue(any(w.startswith("CLAUDE.md:3:") and "by number" in w for w in warnings), warnings)
+
+    def test_an_instruction_file_error_is_located_in_that_file(self):
+        self.write("sub/AGENTS.md", "acme-0007\n")
+        located, _warnings = decisions.lint_corpus_located(load(self.acme), self.acme)
+        sources = [srcs for msg, srcs in located if "refers to acme-0007" in msg]
+        self.assertEqual(len(sources), 1, located)
+        self.assertEqual([Path(p).resolve() for p in sources[0]], [(self.acme / "sub" / "AGENTS.md").resolve()])
+
+
 class Deps(CliCase):
     def test_deps_lists_dependents_and_amenders(self):
         self.write("docs/decisions/dep.md", record("acme-dep", depends_on=["acme-1"]))

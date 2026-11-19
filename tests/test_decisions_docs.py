@@ -214,5 +214,43 @@ class FollowUpDocs(unittest.TestCase):
         self.assertEqual(manifest["version"], "0.25.0")
 
 
+class InstructionFileDocs(unittest.TestCase):
+    def section(self) -> str:
+        text = DOC.read_text()
+        m = re.search(r"^#+ .*CLAUDE\.md and AGENTS\.md.*$", text, re.M)
+        self.assertIsNotNone(m, "docs/decisions.md has no 'CLAUDE.md and AGENTS.md' section")
+        rest = text[m.end():]
+        nxt = re.search(r"^#{1,%d} " % len(m.group(0).split()[0]), rest, re.M)
+        return rest[: nxt.start()] if nxt else rest
+
+    def test_decisions_doc_explains_one_home_per_rule(self) -> None:
+        body = self.section()
+        self.assertRegex(body, r"(?i)one home per rule")
+        self.assertRegex(body, r"(?i)override|precedence|wins")
+        self.assertRegex(body, r"(?i)orientation")
+        self.assertRegex(body, r"(?i)restate")
+        self.assertRegex(body, r"(?i)review")
+
+    def test_decisions_doc_lists_the_instruction_file_lint_checks(self) -> None:
+        body = self.section()
+        for status in ("superseded", "retired", "rejected", "proposed", "open"):
+            with self.subTest(status=status):
+                self.assertIn(status, body)
+        self.assertRegex(body, r"(?i)by number|numbered")
+        self.assertRegex(body, r"(?i)error")
+        self.assertRegex(body, r"(?i)warning")
+
+    def test_both_skills_mention_instruction_files(self) -> None:
+        for path in (REVIEW_SKILL, DECISIONS_SKILL):
+            with self.subTest(skill=path.parent.name):
+                text = path.read_text()
+                self.assertIn("CLAUDE.md", text)
+                self.assertIn("AGENTS.md", text)
+        self.assertRegex(REVIEW_SKILL.read_text(), r"(?i)restate")
+        decisions_text = DECISIONS_SKILL.read_text()
+        self.assertRegex(decisions_text, r"(?i)reference[^.]*\bid\b|\bid\b[^.]*reference")
+        self.assertRegex(decisions_text, r"(?is)AGENTS\.md[^.]*(owner|Codex)")
+
+
 if __name__ == "__main__":
     unittest.main()

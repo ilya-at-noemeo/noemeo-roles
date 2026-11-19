@@ -267,5 +267,42 @@ class StopLint(HookCase):
         self.assertIn("acme-dup", out["reason"])
 
 
+class StopInstructionFiles(HookCase):
+    """A CLAUDE.md or AGENTS.md citing a non-current decision blocks the stop."""
+
+    def with_superseded(self, root: str = "docs/decisions", base: Path | None = None) -> None:
+        base = base or self.repo
+        decision(base, f"{root}/old.md", "acme-old", status="superseded")
+        decision(base, f"{root}/new.md", "acme-new", supersedes='["acme-old"]')
+
+    def test_a_superseded_reference_in_claude_md_blocks_the_stop(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        self.with_superseded()
+        (self.repo / "CLAUDE.md").write_text("# Acme\nSee acme-old.\n")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("CLAUDE.md:2: refers to acme-old, which is superseded; superseded by acme-new", out["reason"])
+
+    def test_the_block_holds_when_the_decisions_live_outside_the_repo(self) -> None:
+        self.config({"decision_roots": ["../widget/decisions"]})
+        self.with_superseded("decisions", self.repo.parent / "widget")
+        (self.repo / "AGENTS.md").write_text("acme-old\n")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("AGENTS.md:1: refers to acme-old", out["reason"])
+
+    def test_a_warning_only_reference_does_not_block(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/p.md", "acme-prop", status="proposed")
+        (self.repo / "CLAUDE.md").write_text("acme-prop and decision 0008\n")
+        out = self.run_hook()
+        self.assertNotEqual(json.loads(out).get("decision") if out else None, "block")
+
+    def test_no_decision_roots_means_instruction_files_are_not_linted(self) -> None:
+        self.with_superseded()
+        (self.repo / "CLAUDE.md").write_text("acme-old\n")
+        self.assertEqual(self.run_hook(), "")
+
+
 if __name__ == "__main__":
     unittest.main()
