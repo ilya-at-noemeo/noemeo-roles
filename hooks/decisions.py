@@ -57,6 +57,7 @@ class Corpus:
     background: list[tuple[Path, str]] = field(default_factory=list)
     missing_roots: list[str] = field(default_factory=list)
     project: Path | None = None
+    roots_configured: bool = False
 
 
 # ---------------------------------------------------------------- loading
@@ -80,6 +81,7 @@ def load(project: Path) -> Corpus:
         return corpus
     if not isinstance(roots, list):
         return corpus
+    corpus.roots_configured = bool(roots)
     seen: set[Path] = set()
     for root in roots:
         if not isinstance(root, str):
@@ -458,7 +460,76 @@ def lint_corpus_located(
                 continue  # names another checkout; can't be checked from here
             if not any(glob_match(p, f) for p in d.paths for f in files):
                 warnings.append(f"{where(d)}: {d.id} paths match no tracked file")
+    if corpus.roots_configured:
+        _lint_instruction_files(corpus, project, by_id, errors, warnings)
     return errors, warnings
+
+
+# Instruction files the harness loads in full, framed as overriding
+# defaults: a rule restated there would beat its decision, so they may
+# only point at decisions, by id, and only at current ones.
+INSTRUCTION_FILES = ("CLAUDE.md", "AGENTS.md")
+_SKIP_DIRS = {".git", "node_modules", ".venv", "venv", "__pycache__"}
+_TOKEN_CHAR = "A-Za-z0-9_-"
+# "decision 0008", "decisions 0005 and 0006", "decisions 0005, 0006 or 0007"
+_NUMBERED = re.compile(
+    r"\b[Dd]ecisions?\s+\d{3,}(?:(?:\s*,\s*|\s+)(?:(?:and|or)\s+)?\d{3,})*"
+)
+
+
+def _instruction_files(project: Path) -> list[Path]:
+    found = []
+    for dirpath, dirnames, filenames in os.walk(project):
+        dirnames[:] = sorted(n for n in dirnames if n not in _SKIP_DIRS)
+        found.extend(
+            Path(dirpath) / n for n in sorted(filenames) if n in INSTRUCTION_FILES
+        )
+    return found
+
+
+def _lint_instruction_files(corpus, project, by_id, errors, warnings) -> None:
+    if not by_id:
+        return
+    ids = sorted(by_id, key=lambda i: (-len(i), i))
+    reference = re.compile(
+        f"(?<![{_TOKEN_CHAR}])(?:{'|'.join(map(re.escape, ids))})(?![{_TOKEN_CHAR}])"
+    )
+    successors: dict[str, list[str]] = {}
+    for d in corpus.decisions:
+        if d.status in CURRENT:
+            for target in d.supersedes:
+                successors.setdefault(target, []).append(d.id)
+
+    for path in _instruction_files(project):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        shown = _display(path, project)
+        for n, line in enumerate(text.splitlines(), 1):
+            seen: set[str] = set()
+            for m in reference.finditer(line):
+                id = m.group(0)
+                if id in seen:
+                    continue
+                seen.add(id)
+                status = by_id[id][0].status
+                where = f"{shown}:{n}: refers to {id}, which is {status}"
+                if status in ("superseded", "retired", "rejected"):
+                    after = sorted(set(successors.get(id, [])))
+                    if after:
+                        where += f"; superseded by {', '.join(after)}"
+                    errors.append((where, [path]))
+                elif status in ("proposed", "open"):
+                    warnings.append(f"{where}, not accepted")
+            for m in _NUMBERED.finditer(line):
+                if any(num not in by_id for num in re.findall(r"\d{3,}", m.group(0))):
+                    quoted = m.group(0)
+                    warnings.append(
+                        f'{shown}:{n}: refers to a decision by number ("{quoted}"); '
+                        "use its id so lint can check it"
+                    )
+                    break
 
 
 # ---------------------------------------------------------------- version
