@@ -426,6 +426,19 @@ class ResolveCli(CliCase):
         self.assertEqual(proc.returncode, 0, proc.stderr)
         self.assertIn("acme-sub", proc.stdout)
 
+    def test_resolve_includes_the_depends_on_closure_of_decisions_in_scope(self):
+        self.write("docs/decisions/b1.md", record("b-1", paths=["src/**"], depends_on=["a-1", "d-1"]))
+        self.write("docs/decisions/a1.md", record("a-1", depends_on=["z-1"]))
+        self.write("docs/decisions/z1.md", record("z-1"))
+        self.write("docs/decisions/c1.md", record("c-1"))
+        self.write("docs/decisions/d1.md", record("d-1", status="superseded"))
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "x.py"))
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        for text in ("Do b-1.", "Do a-1.", "Do z-1."):  # in scope, dependency, transitive
+            self.assertIn(text, proc.stdout)
+        self.assertNotIn("Do c-1.", proc.stdout)  # unrelated, not in scope
+        self.assertNotIn("Do d-1.", proc.stdout)  # superseded: not current
+
 
 if __name__ == "__main__":
     unittest.main()
