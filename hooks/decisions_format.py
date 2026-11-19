@@ -138,21 +138,30 @@ def title_of(path: Path) -> str:
 
 
 def _split_list(inner: str) -> list[str]:
-    """Split on commas outside double quotes; quoted items keep their text."""
-    items: list[tuple[str, bool]] = []
-    cur: list[str] = []
-    quoted = was_quoted = False
+    """Split on commas outside double quotes. Blanks outside quotes are
+    dropped; blanks inside quotes are kept."""
+    items: list[list[tuple[str, bool]]] = [[]]
+    quoted = False
     for ch in inner:
         if ch == '"':
             quoted = not quoted
-            was_quoted = True
+            if quoted:
+                items[-1].append(("", True))  # marks a quoted item
         elif ch == "," and not quoted:
-            items.append(("".join(cur), was_quoted))
-            cur, was_quoted = [], False
+            items.append([])
         else:
-            cur.append(ch)
-    items.append(("".join(cur), was_quoted))
-    return [t if q else t.strip() for t, q in items if q or t.strip()]
+            items[-1].append((ch, quoted))
+    out = []
+    for chars in items:
+        was_quoted = any(q for _, q in chars)
+        while chars and not chars[0][1] and chars[0][0].isspace():
+            chars.pop(0)
+        while chars and not chars[-1][1] and chars[-1][0].isspace():
+            chars.pop()
+        text = "".join(c for c, _ in chars)
+        if text or was_quoted:
+            out.append(text)
+    return out
 
 
 def _parse_value(raw: str):
