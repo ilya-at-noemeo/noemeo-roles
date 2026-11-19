@@ -38,6 +38,11 @@ import shlex
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("closed", "guard.py")  # before anything that needs 3.12
+
 DEFAULT_SECRETS = [
     r"\.env(?!\.example\b)(?:\.[\w.-]+)?",
     r"[\w.-]*\.pem",

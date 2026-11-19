@@ -13,6 +13,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOKS = ROOT / "hooks"
+sys.path.insert(0, str(HOOKS))
+import pyfloor  # noqa: E402  (old-syntax only, like this file up to main)
 
 
 def project_dir(cwd):
@@ -65,6 +67,15 @@ def denied(output):
     ))
 
 
+def deliver(event, cwd, project):
+    """Decision delivery; its own failure is a notice, never a denial."""
+    try:
+        return run("decision_delivery.py", event, cwd, project)
+    except Exception as error:
+        return {"systemMessage": f"Decision delivery failed ({error}); the action was not blocked. "
+                                 "Run decisions.py lint."}
+
+
 def dispatch(event):
     kind = event["hook_event_name"]
     cwd = Path(event["cwd"])
@@ -87,27 +98,56 @@ def dispatch(event):
         projects = list(dict.fromkeys([project, project_dir(cwd)]))
         if name == "apply_patch":
             command = data.get("command", data.get("input", ""))
-            for path in patch_paths(command):
-                output = guard({**event, "tool_name": "Write",
-                               "tool_input": {"file_path": path}}, cwd, projects)
+            writes = [{**event, "tool_name": "Write", "tool_input": {"file_path": path}}
+                      for path in patch_paths(command)]
+            # Every path passes the guard before any delivery is spent.
+            for write in writes:
+                output = guard(write, cwd, projects)
                 if denied(output):
                     return output
-            return None
+            notices = []
+            for write in writes:
+                output = deliver(write, cwd, project)
+                if denied(output):
+                    return output
+                if output and output.get("systemMessage"):
+                    notices.append(output["systemMessage"])
+            return {"systemMessage": "\n".join(notices)} if notices else None
         output = guard(event, cwd, projects)
         if denied(output):
             return output
+        notice = None
+        if name in ("Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"):
+            # Its own failure is a systemMessage, which is not a denial.
+            output = deliver(event, cwd, project)
+            if denied(output):
+                return output
+            notice = output if output and output.get("systemMessage") else None
         if name == "Bash":
-            return run("review_gate.py", event, cwd, project)
+            gate = run("review_gate.py", event, cwd, project)
+            return gate or notice
+        if notice:
+            return notice
     if kind == "PostToolUse" and name in ("apply_patch", "Write", "Edit", "MultiEdit"):
         paths = patch_paths(data.get("command", data.get("input", ""))) if name == "apply_patch" else [data.get("file_path", "")]
+        tool = "Write" if name == "apply_patch" else name
         messages = []
+        notices = []
         for path in paths:
             path = str((cwd / path).resolve())
+            file_event = {**event, "tool_name": tool, "tool_input": {"file_path": path}}
             output = run("ruff_touched_file.sh", {**event, "tool_input": {"file_path": path}}, cwd, project)
             if output:
                 messages.append(output.get("reason") or output.get("systemMessage", ""))
+            output = deliver(file_event, cwd, project)
+            if output and output.get("decision") == "block":
+                messages.append(output.get("reason", ""))
+            elif output and output.get("systemMessage"):
+                notices.append(output["systemMessage"])
         if messages:
             return {"decision": "block", "reason": "\n".join(messages)}
+        if notices:
+            return {"systemMessage": "\n".join(notices)}
     if kind == "Stop":
         return run("stop_tests.py", event, cwd, project, 290)
     if kind == "SubagentStop":
@@ -123,10 +163,28 @@ def dispatch(event):
     return None
 
 
+def below_floor(event):
+    """The hooks need pyfloor.MIN: on an older Python the guard path denies
+    (it can't check), every other event gets a warning and goes on."""
+    if tuple(sys.version_info)[:2] >= pyfloor.MIN:
+        return None
+    reason = pyfloor.message("Noemeo's Codex hooks")
+    if event.get("hook_event_name") == "PreToolUse":
+        return {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }}
+    return {"systemMessage": reason}
+
+
 def main():
     event = {}
     try:
         event = json.load(sys.stdin)
+        floor = below_floor(event if isinstance(event, dict) else {})
+        if floor:
+            print(json.dumps(floor))
+            return
         output = dispatch(event)
         if output:
             print(json.dumps(output))

@@ -38,6 +38,9 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # no __pycache__ beside the hooks
 sys.path.insert(0, str(Path(__file__).parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("open", "review_record.py")  # before anything that needs 3.12
 from review_state import log, record, record_snapshot, snapshot, toplevel  # noqa: E402
 
 VERDICTS = ("Not ready", "Ready with nits", "Ready")

@@ -21,6 +21,36 @@ reviewed.
 
 ## Step 2: Load the rules
 
+**Decisions by scope.** If the repo's `.claude/noemeo-guard.json`
+configures `decision_roots`, don't read every decision file. Resolve the
+ones that apply to the target:
+
+```text
+python3 <noemeo-roles>/hooks/decisions.py --project <repo> \
+  resolve --diff <base> --task review
+```
+
+`<base>` is the base from Step 1. Add `--task <kind>` for each other
+task kind the change falls under (`design`, `release`, ...). `--diff`
+resolves path scopes only. Also scan the index (`decisions.py index`)
+and the `commands:` lines of the files it lists (`grep -rn '^commands:'`
+in the configured roots) for command-scoped decisions whose commands the
+change runs or adds (CI workflows, scripts, Makefiles, docs that show
+commands), and pass each such command as `--command "<command>"` in the
+same call. The output
+is the decisions in scope for the changed paths, with their amendments
+and the current decisions they depend on (labelled as dependencies),
+each with its version (the Git commit that introduced its current
+content, marked `(uncommitted changes)` when the working tree differs).
+Check the change
+against these in Step 3. Then read what the resolver can't know: the
+repo's `CLAUDE.md` (and any nested one in the directories the target
+touches). If the target spans repos, resolve in each repo that
+configures roots. Use the index (`decisions.py index`) to look for
+decisions that name a task kind you judge applies.
+
+If the repo configures no `decision_roots`, keep the reading below.
+
 1. **Generic decisions:** read every `*.md` in the generic decision
    log, `decisions/` in the private `noemeo-foundation` repo, found as
    a sibling checkout: `../noemeo-foundation/decisions/` from the
@@ -56,10 +86,22 @@ Pay particular attention to:
 - product names or links appearing in generic repos (0004);
 - new capabilities without a named forcing case (0003).
 
+**Instruction files.** When the change touches a `CLAUDE.md` or
+`AGENTS.md`, check that text against the resolved decisions. These
+files load in full every session and win over hook-delivered
+decisions, so a rule has one home: its decision. Flag text that
+restates or contradicts a decision instead of referring to its id
+(suggest the one-line reference as the fix), and references to a
+decision that isn't current (superseded, retired, rejected, or still
+proposed or open) or that cite it by bare number instead of its id.
+`decisions.py lint` catches the references, not the restatements.
+
 ## Step 4: Report
 
 Start with one line: the target reviewed and which rule sources were
-loaded. Then, most severe first:
+loaded. When decisions were resolved, name each id with its version
+(for example `acme-0007 @ 3f9a1c2b07de`), so the report shows what was
+checked. Then, most severe first:
 
 | # | Severity | Rule | Where | Finding | Suggested fix |
 |---|---|---|---|---|---|

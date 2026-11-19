@@ -7,9 +7,11 @@ lifecycle event whatever the model decides.
 | Event | Hook | Does |
 | --- | --- | --- |
 | PreToolUse | `guard.py` | Denies `rm -rf`, force-pushes, `git clean -f`, and Bash or file-tool access to secrets: `.env`/`.env.*` (not `.env.example`), `*.pem`, `.certs/`, `.aws/credentials`. Commit messages and PR bodies that only mention them are allowed. In a repo that lists its AWS profiles, also denies `aws`/`terraform` commands that don't use one. |
-| SessionStart | `session_context.sh` | Adds branch, uncommitted files, recent commits, open GitHub issues, the last failing test run and `roles/working-agreement.md` to the session. |
+| SessionStart | `session_context.sh` | Adds branch, uncommitted files, recent commits, open GitHub issues, the last failing test run, `roles/working-agreement.md` and, where the repo lists `decision_roots`, the decision index and its always-on decisions to the session. |
 | PreToolUse | `review_gate.py` | Before `gh pr create` (or its alias `gh pr new`), denies unless `noemeo-code-reviewer`'s latest review of the change *as it is now* says Ready or Ready with nits; tells Claude to run the reviewer otherwise. Fails closed: a mention counts unless it sits wholly in a heredoc body or quoted string, the command runs no shell, interpreter or other runner (`sh -c`, `python`, `xargs`, `ssh`, `$VAR`, ...) and no `$(`/backtick comes before it -- so a commit message naming it passes, anything else is denied. |
 | SubagentStop | `review_record.py` | When `noemeo-code-reviewer` finishes, records its verdict against a fingerprint of the repo it names: the content of every file changed since the merge-base with the PR base, untracked files included. It records against the repo's default bases (`origin/HEAD`, `origin/dev`, `origin/main`) and any remote branch the branch is stacked on (in its history, not yet in a default base), so a PR targeting another open branch can pass the gate. A stacked base that has gained commits since isn't in the branch's history: rebase onto it, then review. Committing reviewed changes keeps the fingerprint; any further edit voids it. Records live in the repo's git directory (`noemeo-reviews.jsonl`), never in the tree. The report is read from the reviewer's transcript, not `last_assistant_message`: a reviewer that hands its report back with SubagentHandback stops before the hand-back reaches the transcript, and that field still holds an earlier run's report or none. So the hook hands the event to a detached copy of itself, which waits (up to two minutes) until the transcript ends with this run's report. What it records is the state when the reviewer stopped, so edits made while it waits don't pass as reviewed: the hook fingerprints the session's repo and every repo the reviewer's prompts name by absolute path, and a repo only the report names isn't recorded. With no transcript (the Codex adapter) the report is read from `last_assistant_message` and recorded at once. Each stop's outcome -- waiting, what was recorded, or why nothing was -- is appended to `~/.claude/noemeo-review-record.jsonl` (or `NOEMEO_REVIEW_RECORD_LOG`), Codex runs included; the gate names it when it finds no review. Its matcher is the regex `(^\|:)noemeo-code-reviewer$`: a plugin agent's type is scoped (`noemeo:noemeo-code-reviewer`), and a matcher of only letters and hyphens is compared exactly, so the plain name never fires. |
+| SubagentStart | `decisions.py subagent-start` | Where the repo lists `decision_roots`, gives each subagent the same decision index and always-on decisions as session start (as additionalContext), recorded as delivered to that subagent. Prints nothing otherwise, and never disturbs a subagent's start. |
+| PreToolUse, PostToolUse | `decision_delivery.py` | In a repo that lists `decision_roots`, delivers the decisions in scope of a tool call: a binding decision denies the first matching edit, write or command once, with its text as the reason, and the retry passes; a descriptive one is added after the first matching read or edit. A decision is delivered again only when its content changed or the context that got it is gone. A failure to deliver prints a message and never denies. Format, scope and limits: [decisions.md](decisions.md). |
 | PostToolUse | `ruff_touched_file.sh` | `ruff check --fix` then `ruff format` on each edited `.py` file; unfixable lint goes back to Claude. |
 | Stop | `stop_tests.py` | `pytest -x -q` plus the repo's `stop_pytest_args`; a failure blocks the turn from ending and is handed back. Skipped when the tree is unchanged since the last green run. |
 | SubagentStop | `agent_usage.py` | For every subagent, appends one JSON line to `~/.claude/noemeo-agent-usage.jsonl` (or `$NOEMEO_AGENT_USAGE_LOG`): agent type and task, repo, model, input and cache tokens, characters written, tool calls and duration, read from the subagent's own transcript. Output tokens aren't logged: the transcript usually keeps a streamed message's usage from the start of the stream, so its output counts are mostly near zero. A resumed agent logs its running total, so the last line per agent id is its total. Never blocks. |
@@ -32,6 +34,13 @@ and CI:
 
 ```json
 { "stop_pytest_args": ["-m", "not browser"] }
+```
+
+A repo that keeps decisions lists their folders (relative to the repo,
+sibling checkouts allowed) to switch on the index and delivery:
+
+```json
+{ "decision_roots": ["docs/decisions"] }
 ```
 
 A repo with secrets of its own lists them in `.claude/noemeo-guard.json`,
@@ -66,3 +75,37 @@ or secret is denied too. Write such text with the file tools instead.
 Tool-specific hooks for other stacks (`terraform fmt`, say) get added
 here once a repo actually needs one. Review or disable
 hooks with `/hooks`.
+
+## Python
+
+The Python hooks need Python 3.12 or newer. They run as
+`#!/usr/bin/env python3`, so the interpreter is the first `python3` on
+the PATH Claude Code (and Codex) run hooks with, which isn't
+necessarily your shell's. Check it from that same environment:
+
+```text
+/usr/bin/env python3 --version
+```
+
+On macOS, `/usr/bin/python3` is 3.9 (the Command Line Tools' Python),
+and an editor or Claude Code started from the Dock, Finder or another
+GUI app may not read your shell profile, so it sees that one even when
+your terminal has a newer `python3`. Put a newer `python3` (Homebrew's
+`/opt/homebrew/bin`, for example) first on the PATH that environment
+inherits, then restart Claude Code.
+
+Each hook checks the version first (`hooks/pyfloor.py`) and fails
+loudly instead of crashing at import, which Claude Code would treat as
+a non-blocking error and so leave the guard silently off:
+
+- `guard.py` and `review_gate.py` exit 2 with the reason on stderr,
+  which denies the tool call. The guard runs on reads too, so below
+  3.12 every Read, Bash, Edit, Write, Grep and Glob call is refused
+  until the PATH is fixed.
+- `decision_delivery.py`, `stop_tests.py`, `agent_usage.py` and
+  `review_record.py` print the reason as a systemMessage and allow.
+- `decisions.py session-start` prints it as session context;
+  `decisions.py subagent-start` gives it to the subagent as context;
+  the command line prints it on stderr and exits 2.
+- The Codex adapter denies a tool call with the reason and warns on
+  every other event.

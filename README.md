@@ -18,6 +18,17 @@ scripts, and both follow the same
 it, the lifecycle it aims for and what is still a goal are in
 [docs/principles.md](docs/principles.md).
 
+> **Requires Python 3.12 or newer as `python3`.** The hooks run with the
+> first `python3` on the PATH that Claude Code (or Codex) starts them
+> with. Below 3.12 the guard can't check anything, so it refuses every
+> tool call, reads included, with a message naming the Python it found;
+> the other hooks warn and step aside. To recover, put a newer `python3`
+> first on the PATH Claude Code inherits (on macOS, `/usr/bin/python3`
+> is 3.9, and an editor or app started from the Dock or Finder may not
+> read your shell profile), then restart Claude Code. Check from the
+> same environment with `/usr/bin/env python3 --version`. Details:
+> [docs/hooks.md](docs/hooks.md#python).
+
 ## What it does today
 
 ### Enforced by hooks
@@ -33,6 +44,12 @@ run whether or not the model chooses to perform them:
   under both tools.
 - **Guard** (PreToolUse): denies destructive git and file commands and
   access to secrets; optionally requires a named AWS profile.
+- **Decision delivery** (SessionStart, SubagentStart +
+  PreToolUse/PostToolUse), in repos that list `decision_roots`: an index
+  of the repo's decisions at session start and at each subagent's
+  start, and each decision's text when an action first falls in
+  its scope; a binding one is delivered before the action. Format and
+  limits: [docs/decisions.md](docs/decisions.md).
 - **Ruff** (PostToolUse) and **tests before stop** (Stop), in repos
   that opt in: lint fixed on every Python edit, and a failing test run
   blocks the first attempt to end a turn and hands the failure back.
@@ -149,7 +166,8 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 
 | Name | Kind | Use it for |
 | --- | --- | --- |
-| `noemeo-design-review` | skill | Reviewing a design, plan or diff against settled decisions and the current repo's `CLAUDE.md` |
+| `noemeo-design-review` | skill | Reviewing a design, plan or diff against settled decisions (resolved from the diff where the repo lists `decision_roots`) and the current repo's `CLAUDE.md` |
+| `noemeo-decisions` | skill | Recording settled knowledge as a decision in the repo's decision roots: proposed with scope, links, origin and evidence, checked for conflicts, accepted only by the owner, dependents named on change |
 | `noemeo-llm-engineering` | skill | Designing or reviewing an LLM-backed component: LLM vs. deterministic code, model choice, structured output, client seam, cost/latency, evals |
 | `noemeo-prompt-engineering` | skill | Writing, revising or reviewing prompts: measured baseline, provider-aware structure, principles, injection resistance, prompt hashes, before/after evidence |
 | `noemeo-ml-engineering` | skill | Classical ML and self-hosted inference: baselines, splits/leakage, reproducible evaluation, serving, drift |

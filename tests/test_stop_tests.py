@@ -27,7 +27,7 @@ def git_out(repo: Path, *args: str) -> str:
     return subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True, text=True).stdout.strip()
 
 
-class StopTestsHook(unittest.TestCase):
+class HookCase(unittest.TestCase):
     def setUp(self) -> None:
         self._tmp = tempfile.TemporaryDirectory()
         self.locked: list[Path] = []
@@ -84,6 +84,9 @@ class StopTestsHook(unittest.TestCase):
     def pytest_args(self) -> list[str]:
         return self.args_file.read_text().splitlines()
 
+
+
+class StopTestsHook(HookCase):
     def test_repo_args_are_appended(self) -> None:
         self.install_stub()
         self.config({"stop_pytest_args": ["-m", "not browser"]})
@@ -138,6 +141,166 @@ class StopTestsHook(unittest.TestCase):
     def test_no_venv_and_no_tests_is_silent(self) -> None:
         (self.repo / "tests" / "test_x.py").unlink()
         (self.repo / "tests").rmdir()
+        self.assertEqual(self.run_hook(), "")
+
+
+def decision(repo: Path, rel: str, id: str, **fields: str) -> None:
+    """A decision record under `repo`; extra fields are raw `key: value` text."""
+    values = {"id": id, "kind": "policy", "status": "accepted", "binding": "true",
+              "summary": f"Summary of {id}", **fields}
+    front = "\n".join(f"{k}: {v}" for k, v in values.items())
+    path = repo / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(f"---\n{front}\n---\n# Record {id}\n\n## How to apply\nDo {id}.\n")
+
+
+class StopLint(HookCase):
+    """Decision lint runs from the Stop hook when the repo has decision_roots."""
+
+    def with_duplicate_ids(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/a.md", "acme-dup")
+        decision(self.repo, "docs/decisions/b.md", "acme-dup")
+
+    def with_only_warnings(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/ok.md", "acme-ok")
+        decision(self.repo, "docs/decisions/nosum.md", "acme-nosum", summary='""')
+
+    def test_lint_error_blocks_the_stop(self) -> None:
+        self.with_duplicate_ids()  # no .venv at all: lint needs only the standard library
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("error:", out["reason"])
+        self.assertIn("acme-dup", out["reason"])
+
+    def test_lint_error_blocks_even_when_the_tests_pass(self) -> None:
+        self.install_stub(exit_code=0)
+        self.with_duplicate_ids()
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("acme-dup", out["reason"])
+
+    def test_lint_warnings_do_not_block(self) -> None:
+        self.with_only_warnings()
+        out = self.run_hook()  # no .venv
+        self.assertNotEqual(json.loads(out).get("decision") if out else None, "block")
+        self.install_stub(exit_code=0)
+        (self.repo / ".git" / "claude-tests-green").unlink(missing_ok=True)
+        out = self.run_hook()
+        self.assertNotEqual(json.loads(out).get("decision") if out else None, "block")
+
+    def test_clean_decisions_do_not_change_the_stop(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/ok.md", "acme-ok")
+        self.assertEqual(self.run_hook(), "")
+
+    def test_no_decision_roots_means_no_lint(self) -> None:
+        decision(self.repo, "docs/decisions/a.md", "acme-dup")
+        decision(self.repo, "docs/decisions/b.md", "acme-dup")
+        self.assertEqual(self.run_hook(), "")  # no config at all
+        self.config({"stop_pytest_args": []})
+        self.assertEqual(self.run_hook(), "")  # config without decision_roots
+
+    def test_failing_tests_still_block_when_lint_is_clean(self) -> None:
+        self.install_stub(exit_code=1)
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/ok.md", "acme-ok")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("Tests are failing", out["reason"])
+
+    def test_an_internal_lint_failure_does_not_block_and_is_named_on_stderr(self) -> None:
+        # a copy of the hooks whose decisions module fails inside load()/lint_corpus()
+        hooks = self.repo.parent / "hooks-broken"
+        hooks.mkdir()
+        for name in ("stop_tests.py", "decisions_format.py", "pyfloor.py"):
+            (hooks / name).write_text((HOOK.parent / name).read_text())
+        (hooks / "decisions.py").write_text(
+            "class Corpus:\n    pass\n\n"
+            "def load(project):\n    raise RuntimeError('boom')\n\n"
+            "def lint_corpus(corpus, project):\n    raise RuntimeError('boom')\n"
+        )
+        self.install_stub(exit_code=0)
+        self.with_duplicate_ids()
+        proc = subprocess.run(
+            [sys.executable, str(hooks / "stop_tests.py")],
+            input=json.dumps({"session_id": "s1", "stop_hook_active": False}),
+            capture_output=True,
+            text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.repo)),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if proc.stdout.strip():
+            self.assertNotEqual(json.loads(proc.stdout).get("decision"), "block")
+        lines = [ln for ln in proc.stderr.splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 1, proc.stderr)
+        self.assertIn("decisions", lines[0])
+        self.assertIn("lint", lines[0])
+
+    def test_lint_error_outside_the_repo_does_not_block_but_is_noticed(self) -> None:
+        outside = self.repo.parent / "widget" / "decisions"
+        self.config({"decision_roots": ["../widget/decisions"]})
+        decision(self.repo.parent / "widget", "decisions/a.md", "widget-dup")
+        decision(self.repo.parent / "widget", "decisions/b.md", "widget-dup")
+        self.assertTrue(outside.is_dir())
+        proc = subprocess.run(
+            [sys.executable, str(HOOK)],
+            input=json.dumps({"session_id": "s1", "stop_hook_active": False}),
+            capture_output=True, text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.repo)),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if proc.stdout.strip():
+            self.assertNotEqual(json.loads(proc.stdout).get("decision"), "block", proc.stdout)
+        lines = [ln for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 1, proc.stdout + proc.stderr)
+        self.assertIn("widget", lines[0])
+
+    def test_lint_error_in_a_root_inside_the_repo_still_blocks_beside_an_outside_root(self) -> None:
+        self.config({"decision_roots": ["docs/decisions", "../widget/decisions"]})
+        decision(self.repo, "docs/decisions/a.md", "acme-dup")
+        decision(self.repo, "docs/decisions/b.md", "acme-dup")
+        decision(self.repo.parent / "widget", "decisions/c.md", "widget-ok")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("acme-dup", out["reason"])
+
+
+class StopInstructionFiles(HookCase):
+    """A CLAUDE.md or AGENTS.md citing a non-current decision blocks the stop."""
+
+    def with_superseded(self, root: str = "docs/decisions", base: Path | None = None) -> None:
+        base = base or self.repo
+        decision(base, f"{root}/old.md", "acme-old", status="superseded")
+        decision(base, f"{root}/new.md", "acme-new", supersedes='["acme-old"]')
+
+    def test_a_superseded_reference_in_claude_md_blocks_the_stop(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        self.with_superseded()
+        (self.repo / "CLAUDE.md").write_text("# Acme\nSee acme-old.\n")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("CLAUDE.md:2: refers to acme-old, which is superseded; superseded by acme-new", out["reason"])
+
+    def test_the_block_holds_when_the_decisions_live_outside_the_repo(self) -> None:
+        self.config({"decision_roots": ["../widget/decisions"]})
+        self.with_superseded("decisions", self.repo.parent / "widget")
+        (self.repo / "AGENTS.md").write_text("acme-old\n")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("AGENTS.md:1: refers to acme-old", out["reason"])
+
+    def test_a_warning_only_reference_does_not_block(self) -> None:
+        self.config({"decision_roots": ["docs/decisions"]})
+        decision(self.repo, "docs/decisions/p.md", "acme-prop", status="proposed")
+        (self.repo / "CLAUDE.md").write_text("acme-prop and decision 0008\n")
+        out = self.run_hook()
+        self.assertNotEqual(json.loads(out).get("decision") if out else None, "block")
+
+    def test_no_decision_roots_means_instruction_files_are_not_linted(self) -> None:
+        self.with_superseded()
+        (self.repo / "CLAUDE.md").write_text("acme-old\n")
         self.assertEqual(self.run_hook(), "")
 
 

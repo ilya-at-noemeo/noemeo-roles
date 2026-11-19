@@ -29,6 +29,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("open", "stop_tests.py")  # before anything that needs 3.12
+
 TIMEOUT_S = 280  # under the hook's own 300s timeout
 
 
@@ -75,6 +80,53 @@ def warn_once(git_dir: Path, session_id: str, message: str) -> None:
     print(json.dumps({"systemMessage": message}))
 
 
+def _inside(path: Path, base: Path) -> bool:
+    try:
+        path.resolve().relative_to(base)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+def lint_errors() -> list[str]:
+    """Decision lint errors, only when the repo configures `decision_roots`.
+    Only errors about files inside the repo block; errors from roots
+    outside it (a sibling checkout's decisions) are one notice line on
+    stderr. An internal failure never blocks the stop."""
+    try:
+        config = json.loads((Path(".claude") / "noemeo-guard.json").read_text())
+        roots = config.get("decision_roots")
+    except (OSError, ValueError, AttributeError):
+        return []
+    if not roots or not isinstance(roots, list):
+        return []
+    try:
+        import decisions
+
+        repo = Path.cwd().resolve()
+        located, _warnings = decisions.lint_corpus_located(decisions.load(repo), repo)
+        blocking, outside = [], []
+        for message, sources in located:
+            if not sources or any(_inside(s, repo) for s in sources):
+                blocking.append(message)
+                continue
+            named = [
+                r for r in roots
+                if isinstance(r, str) and any(_inside(s, (repo / r).resolve()) for s in sources)
+            ] or [str(Path(sources[0]).parent)]
+            outside.extend(r for r in named if r not in outside)
+        if outside:
+            print(
+                f"Decision lint: errors in decision roots outside this repo "
+                f"({', '.join(outside)}); run decisions.py lint in their repo.",
+                file=sys.stderr,
+            )
+        return blocking
+    except Exception as e:  # noqa: BLE001
+        print(f"decisions lint failed internally ({e!r}); run decisions.py lint", file=sys.stderr)
+        return []
+
+
 def main() -> None:
     payload = json.load(sys.stdin)
     # Already blocked once this stop and Claude is still stopping: let it
@@ -89,6 +141,18 @@ def main() -> None:
         git_dir = Path(git("rev-parse", "--absolute-git-dir").strip())
     except (OSError, subprocess.CalledProcessError):
         return  # not a git repo
+    errors = lint_errors()
+    if errors:
+        print(
+            json.dumps(
+                {
+                    "decision": "block",
+                    "reason": "Decision lint failed (python3 hooks/decisions.py lint). "
+                    "Fix these before finishing:\n\n" + "\n".join(f"error: {e}" for e in errors),
+                }
+            )
+        )
+        return
     if not Path(".venv/bin/pytest").exists():
         if main_checkout_has_pytest():
             warn_once(

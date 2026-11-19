@@ -59,3 +59,7 @@ permission here.
 - Durable decisions go in the existing decision log, open items in the
   existing backlog, when the owner authorises it. Never start a second
   tracker.
+- Settled project knowledge (a policy, an architecture or product
+  definition, a measured finding) goes to the repo's decision roots
+  through the `noemeo-decisions` skill, never only into one tool's
+  private memory. An agent proposes; only a person accepts.
