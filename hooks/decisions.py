@@ -9,6 +9,7 @@ is the nearest ancestor holding `.git`, looked up once per directory.
 from __future__ import annotations
 
 import json
+import os
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,14 +31,23 @@ class Corpus:
     errors: list[FormatError] = field(default_factory=list)
     background: list[tuple[Path, str]] = field(default_factory=list)
     missing_roots: list[str] = field(default_factory=list)
+    project: Path | None = None
 
 
 # ---------------------------------------------------------------- loading
 
 
+def _markdown_files(base: Path) -> list[Path]:
+    found = []
+    for dirpath, dirnames, filenames in os.walk(base):  # unreadable dirs are skipped
+        dirnames.sort()
+        found.extend(Path(dirpath) / n for n in sorted(filenames) if n.endswith(".md"))
+    return sorted(found)
+
+
 def load(project: Path) -> Corpus:
-    corpus = Corpus()
     project = Path(project)
+    corpus = Corpus(project=project)
     try:
         config = json.loads((project / CONFIG).read_text(encoding="utf-8"))
         roots = config.get("decision_roots") or []
@@ -53,7 +63,7 @@ def load(project: Path) -> Corpus:
         if not base.is_dir():
             corpus.missing_roots.append(root)
             continue
-        for path in sorted(base.rglob("*.md")):
+        for path in _markdown_files(base):
             try:
                 real = path.resolve()
             except OSError:
@@ -140,6 +150,33 @@ def _toplevel(directory: Path) -> Path | None:
     return found
 
 
+_identities: dict[Path, Path] = {}
+
+
+def _identity(top: Path) -> Path:
+    """The main repository of a checkout: itself, or for a linked worktree
+    the repository its `.git` file points back to (read from files, no Git call)."""
+    if top in _identities:
+        return _identities[top]
+    ident = top
+    dotgit = top / ".git"
+    try:
+        if dotgit.is_file():
+            first = dotgit.read_text(encoding="utf-8").strip().splitlines()[0]
+            if first.startswith("gitdir:"):
+                gitdir = Path(first[len("gitdir:"):].strip())
+                if not gitdir.is_absolute():
+                    gitdir = top / gitdir
+                common = (gitdir / (gitdir / "commondir").read_text(encoding="utf-8").strip())
+                common = common.resolve()
+                if common.name == ".git":
+                    ident = common.parent
+    except (OSError, IndexError, UnicodeDecodeError):
+        pass
+    _identities[top] = ident
+    return ident
+
+
 def _repo_of(path: Path) -> Path | None:
     """Repo of an absolute, resolved path; the nearest existing parent decides."""
     probe = path if path.is_dir() else path.parent
@@ -162,11 +199,11 @@ def in_scope_path(d: Decision, path: Path) -> bool:
         if d.repo == "*":
             pass
         elif d.repo:
-            if tool_repo.name != d.repo:
+            if _identity(tool_repo).name != d.repo:
                 return False
         else:
             own = _repo_of(d.source.resolve())
-            if own is None or own != tool_repo:
+            if own is None or _identity(own) != _identity(tool_repo):
                 return False
         rel = real.relative_to(tool_repo).as_posix()
     except (OSError, ValueError, RuntimeError):
@@ -226,19 +263,18 @@ def resolve(corpus: Corpus, *, paths=(), commands=(), tasks=()) -> list[Decision
 # ---------------------------------------------------------------- index
 
 
-def _display(path: Path) -> str:
-    try:
-        real = Path(path).resolve()
-        top = _repo_of(real)
-        if top is not None:
-            return real.relative_to(top).as_posix()
-    except (OSError, ValueError, RuntimeError):
-        pass
+def _display(path: Path, project: Path | None) -> str:
+    """Path relative to the project root, so the model can open it from there."""
+    if project is not None:
+        try:
+            return Path(os.path.relpath(path, project)).as_posix()
+        except ValueError:
+            pass
     return str(path)
 
 
-def _decision_line(d: Decision) -> str:
-    line = f"- {d.id}: {d.summary} → {_display(d.source)}"
+def _decision_line(d: Decision, project: Path | None) -> str:
+    line = f"- {d.id}: {d.summary} → {_display(d.source, project)}"
     if d.status not in CURRENT:
         line += f" ({d.status})"
     if d.tasks:
@@ -247,28 +283,30 @@ def _decision_line(d: Decision) -> str:
 
 
 def render_index(corpus: Corpus, budget: int = 6000) -> str:
+    project = corpus.project
+    # problems are always kept; only decision and background lines are cut
+    must = [
+        f"- format error in {_display(e.path, project)}:{e.line}: {e.message}"
+        for e in corpus.errors
+    ]
+    must += [f"- configured root not found: {root}" for root in corpus.missing_roots]
     listed = [d for d in corpus.decisions if d.status in CURRENT + ("proposed", "open")]
-    lines = [_decision_line(d) for d in sorted(listed, key=lambda d: d.id)]
-    for e in corpus.errors:
-        lines.append(f"- format error in {_display(e.path)}:{e.line}: {e.message}")
-    for root in corpus.missing_roots:
-        lines.append(f"- configured root not found: {root}")
-    for path, title in corpus.background:
-        lines.append(f"- background: {title} → {_display(path)}")
+    cuttable = [_decision_line(d, project) for d in sorted(listed, key=lambda d: d.id)]
+    cuttable += [
+        f"- background: {title} → {_display(path, project)}"
+        for path, title in corpus.background
+    ]
 
-    head = AUTHORITY
-    full = "\n".join([head, *lines])
+    head = [AUTHORITY, *must]
+    full = "\n".join([*head, *cuttable])
     if len(full) <= budget:
         return full
-    reserve = len(f"\n({len(lines)} entries left out to fit the size limit; read the files)")
+    note = "({} entries left out to fit the size limit; read the files)"
+    size = len("\n".join(head)) + 1 + len(note.format(len(cuttable)))
     kept: list[str] = []
-    size = len(head) + reserve
-    for line in lines:
+    for line in cuttable:
         if size + 1 + len(line) > budget:
             break
         kept.append(line)
         size += 1 + len(line)
-    left = len(lines) - len(kept)
-    return "\n".join(
-        [head, *kept, f"({left} entries left out to fit the size limit; read the files)"]
-    )
+    return "\n".join([*head, *kept, note.format(len(cuttable) - len(kept))])
