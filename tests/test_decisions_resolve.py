@@ -140,6 +140,17 @@ class LoadRoots(Fixture):
         got = {Path(p).name: t for p, t in c.background}
         self.assertEqual(got, {"notes.md": "Plain notes", "other.md": "Other doc"})
 
+    @unittest.skipIf(os.geteuid() == 0, "root ignores directory permissions")
+    def test_unreadable_subdirectory_does_not_stop_loading(self):
+        self.decision("acme-1", paths=["src/**"])
+        self.decision("acme-2", rel="docs/decisions/locked/two.md", paths=["src/**"])
+        locked = self.acme / "docs/decisions/locked"
+        self.decision("acme-3", rel="docs/decisions/open/three.md", paths=["src/**"])
+        os.chmod(locked, 0)
+        self.addCleanup(os.chmod, locked, 0o755)
+        c = self.corpus()  # must not raise
+        self.assertEqual(sorted(self.ids(c.decisions)), ["acme-1", "acme-3"])
+
     def test_a_decision_file_is_not_also_background(self):
         self.decision("acme-1", paths=["src/**"])
         self.assertEqual(self.corpus().background, [])
@@ -490,6 +501,68 @@ class Index(Fixture):
         self.assertEqual(len(note), 1)
         self.assertIn(str(total - listed), re.findall(r"\d+", note[0]))
         self.assertIn(AUTHORITY, text.splitlines()[0])
+
+    def test_index_path_of_another_repos_decision_is_relative_to_the_project(self):
+        self.decision("widget-1", in_repo=self.widget, rel="decisions/0001-x.md",
+                      summary="Widget rule", paths=["src/**"])
+        self.decision("acme-1", summary="Acme rule", paths=["src/**"])
+        self.config(["docs/decisions", "../widget/decisions"])
+        self.assertEqual(
+            sorted(self.lines(render_index(self.corpus()))),
+            ["- acme-1: Acme rule → docs/decisions/acme-1.md",
+             "- widget-1: Widget rule → ../widget/decisions/0001-x.md"],
+        )
+
+    def test_tight_budget_cuts_decisions_but_never_errors_or_missing_roots(self):
+        total = 30
+        for i in range(total):
+            self.decision(f"acme-{i:02d}", summary=f"Summary number {i:02d} " + "x" * 40,
+                          paths=["src/**"])
+        (self.acme / "docs/decisions/broken.md").write_text(
+            "---\nid: acme-broken\nkind: nonsense\n---\n# Broken\n"
+        )
+        self.config(["docs/decisions", "nowhere/decisions"])
+        text = render_index(self.corpus(), budget=1000)
+        self.assertIn("docs/decisions/broken.md", text)
+        self.assertIn("nowhere/decisions", text)
+        self.assertLess(len(self.lines(text)), total + 1)
+        self.assertEqual(len([ln for ln in text.splitlines() if "left out" in ln]), 1)
+        self.assertLessEqual(len(text), 1000)
+
+
+class Worktrees(Fixture):
+    def setUp(self):
+        super().setUp()
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+        subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "x"],
+                       cwd=self.acme, check=True)
+        self.wt = self.tmp / "acme-wt"
+        subprocess.run(["git", "worktree", "add", "-q", "-b", "wt", str(self.wt)],
+                       cwd=self.acme, check=True)
+
+    def load_wt(self, **extra):
+        self.decision("acme-1", in_repo=self.wt, paths=["src/**"], **extra)
+        (self.wt / ".claude").mkdir(exist_ok=True)
+        (self.wt / ".claude" / "noemeo-guard.json").write_text(
+            json.dumps({"decision_roots": ["docs/decisions"]})
+        )
+        return next(d for d in load(self.wt).decisions if d.id == "acme-1")
+
+    def test_default_repo_is_the_main_repository_not_the_checkout(self):
+        d = self.load_wt()
+        self.assertTrue(in_scope_path(d, self.wt / "src/a.py"))
+        self.assertTrue(in_scope_path(d, self.acme / "src/a.py"))
+        self.assertFalse(in_scope_path(d, self.widget / "src/a.py"))
+
+    def test_repo_named_for_the_main_repository_matches_the_worktree(self):
+        d = self.load_wt(repo="acme")
+        self.assertTrue(in_scope_path(d, self.wt / "src/a.py"))
+        self.assertTrue(in_scope_path(d, self.acme / "src/a.py"))
+
+    def test_repo_named_for_another_repository_does_not_match_the_worktree(self):
+        d = self.load_wt(repo="widget")
+        self.assertFalse(in_scope_path(d, self.wt / "src/a.py"))
+        self.assertTrue(in_scope_path(d, self.widget / "src/a.py"))
 
 
 if __name__ == "__main__":
