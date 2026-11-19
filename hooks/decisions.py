@@ -464,6 +464,39 @@ def _cmd_show(corpus: Corpus, project: Path, args) -> int:
     return 0
 
 
+def _cmd_session_start(corpus: Corpus, project: Path) -> int:
+    """SessionStart: the index, then `always: true` decisions in full."""
+    import decision_delivery as delivery
+
+    try:
+        config = json.loads((project / CONFIG).read_text(encoding="utf-8"))
+        roots = config.get("decision_roots")
+    except (OSError, ValueError, AttributeError):
+        return 0
+    if not isinstance(roots, list) or not roots:
+        return 0
+    try:
+        event = json.load(sys.stdin)
+    except ValueError:
+        event = {}
+    if not isinstance(event, dict):
+        event = {}
+    git_dir = delivery.find_git_dir(project)
+    key = delivery.context_key(event)
+    if git_dir is not None and event.get("source") in ("compact", "resume", "clear"):
+        delivery.reset_session(git_dir, str(event.get("session_id") or "nosession"))
+    print("## Decisions in this repo")
+    print()
+    print(render_index(corpus))
+    always = resolve(corpus)  # no paths, commands or tasks: only `always`
+    if always:
+        print()
+        print(delivery.render_delivery(always, corpus))
+        if git_dir is not None:
+            delivery.record(git_dir, key, {d.id: d.version for d in always})
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--project", default=argparse.SUPPRESS, help="project root")
@@ -481,10 +514,15 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("show", parents=[common], help="print a decision, whatever its status")
     p.add_argument("id")
     sub.add_parser("lint", parents=[common], help="check the corpus")
+    sub.add_parser(
+        "session-start", parents=[common], help="session context: index and always-on decisions"
+    )
     args = parser.parse_args(argv)
 
     project = Path(getattr(args, "project", None) or os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
     corpus = load(project)
+    if args.cmd == "session-start":
+        return _cmd_session_start(corpus, project)
     if args.cmd == "index":
         print(render_index(corpus))
         return 0

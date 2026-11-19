@@ -55,4 +55,8 @@ if [ -s "$agreement" ]; then
   echo
   sed '1,/^$/d' "$agreement"  # drop its title line
 fi
+
+# The decisions index and the always-on decisions; prints nothing when the
+# repo configures no decision_roots. Reads the SessionStart event on stdin.
+python3 "$here/decisions.py" session-start || true
 exit 0
