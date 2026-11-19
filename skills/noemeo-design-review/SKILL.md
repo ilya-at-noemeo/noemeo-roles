@@ -31,7 +31,13 @@ python3 <noemeo-roles>/hooks/decisions.py --project <repo> \
 ```
 
 `<base>` is the base from Step 1. Add `--task <kind>` for each other
-task kind the change falls under (`design`, `release`, ...). The output
+task kind the change falls under (`design`, `release`, ...). `--diff`
+resolves path scopes only. Also scan the index (`decisions.py index`)
+and the `commands:` lines of the files it lists (`grep -rn '^commands:'`
+in the configured roots) for command-scoped decisions whose commands the
+change runs or adds (CI workflows, scripts, Makefiles, docs that show
+commands), and pass each such command as `--command "<command>"` in the
+same call. The output
 is the decisions in scope for the changed paths, with their amendments
 and the current decisions they depend on (labelled as dependencies),
 each with its version. Check the change

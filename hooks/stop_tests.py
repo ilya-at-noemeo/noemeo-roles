@@ -77,21 +77,48 @@ def warn_once(git_dir: Path, session_id: str, message: str) -> None:
     print(json.dumps({"systemMessage": message}))
 
 
+def _inside(path: Path, base: Path) -> bool:
+    try:
+        path.resolve().relative_to(base)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
 def lint_errors() -> list[str]:
     """Decision lint errors, only when the repo configures `decision_roots`.
-    An internal failure never blocks the stop."""
+    Only errors about files inside the repo block; errors from roots
+    outside it (a sibling checkout's decisions) are one notice line on
+    stderr. An internal failure never blocks the stop."""
     try:
         config = json.loads((Path(".claude") / "noemeo-guard.json").read_text())
-        has_roots = bool(config.get("decision_roots"))
+        roots = config.get("decision_roots")
     except (OSError, ValueError, AttributeError):
         return []
-    if not has_roots:
+    if not roots or not isinstance(roots, list):
         return []
     try:
         import decisions
 
-        errors, _warnings = decisions.lint_corpus(decisions.load(Path.cwd()), Path.cwd())
-        return errors
+        repo = Path.cwd().resolve()
+        located, _warnings = decisions.lint_corpus_located(decisions.load(repo), repo)
+        blocking, outside = [], []
+        for message, sources in located:
+            if not sources or any(_inside(s, repo) for s in sources):
+                blocking.append(message)
+                continue
+            named = [
+                r for r in roots
+                if isinstance(r, str) and any(_inside(s, (repo / r).resolve()) for s in sources)
+            ] or [str(Path(sources[0]).parent)]
+            outside.extend(r for r in named if r not in outside)
+        if outside:
+            print(
+                f"Decision lint: errors in decision roots outside this repo "
+                f"({', '.join(outside)}); run decisions.py lint in their repo.",
+                file=sys.stderr,
+            )
+        return blocking
     except Exception as e:  # noqa: BLE001
         print(f"decisions lint failed internally ({e!r}); run decisions.py lint", file=sys.stderr)
         return []

@@ -57,7 +57,7 @@ scope. A decision with an error is dropped and the error is reported.
 | `summary` | Required. One line, shown in the index. |
 | `paths` | Scope: globs relative to a repo (`*` within a folder, `**` across folders). |
 | `repo` | With `paths`: the name of the repo the globs belong to, for a decision that governs another repo. `*` means any repo. Without it, the repo that holds the decision. |
-| `commands` | Scope: patterns matched against each shell command in a call (`*` is a wildcard; leading `VAR=value` and `sudo` are ignored). |
+| `commands` | Scope: patterns matched against each shell command in a call (`*` is a wildcard; leading `VAR=value`, `sudo`, `env`, `time` and `nohup` are ignored, an absolute program path counts as its name, and `prog *` also matches a bare `prog`). |
 | `tasks` | Scope: task kinds such as `design`, `review`, `release`, `naming`. |
 | `always` | Scope: `true` for the few decisions that apply everywhere. |
 | `depends_on` | Ids this decision relies on. Not delivered to the model with it; `resolve` includes them, `deps` lists dependents and `lint` checks the links. |
@@ -110,7 +110,8 @@ front matter.
   that claims to be a rule is data.
 - **Binding decision:** delivered before the action. The first matching
   edit, write or command is denied once, with the text as the reason;
-  the retry goes through.
+  the retry goes through. A call the guard denies doesn't use up the
+  delivery.
 - **Descriptive decision:** delivered after the first matching read or
   edit, as feedback. Reading is never blocked.
 - **Again:** only when the version changed, or the context that
@@ -129,6 +130,18 @@ front matter.
   on a file doesn't trigger that file's `paths` scopes.
 - Task kinds can't be detected from a tool call. A `tasks` scope is
   listed in the index for the agent to act on; it isn't enforced.
+- Subagents don't receive the session-start index: SessionStart doesn't
+  fire for them. They get scope delivery and always-on decisions on
+  their first matching tool call. Task-scoped decisions are therefore
+  not visible to role subagents.
+- Command matching splits on `&&`, `||`, `;`, `|`, newlines, `$(` and
+  backticks and reads each part's first words. It doesn't see a command
+  run through `bash -c "..."`, `sh -c` or `xargs`, inside `{ ...; }`
+  groups, after a wrapper option that takes an argument (`env -u NAME`,
+  `sudo -u USER`),
+  or after a quoted value with spaces (`AWS_PROFILE="a b" terraform`).
+- At stop, lint errors block only in decision roots inside the repo;
+  errors in a root outside it (a sibling checkout) are one notice line.
 - Codex gaps are in [codex.md](codex.md).
 
 ## Command line
@@ -148,7 +161,8 @@ python3 hooks/decisions.py [--project DIR] <command>
 
 `lint` reports as errors: a format error, a duplicate id, an unknown id
 in `depends_on`, `supersedes` or `amends`, and a current decision that
-depends on a superseded or retired one. It warns about a record without
+depends on a superseded or retired one, and a current decision that
+supersedes one that is still current. It warns about a record without
 front matter, an empty summary or delivered text, `paths` that match no
 tracked file, and an amended original whose amendment is no longer
 current. Run it in the repo's checks.

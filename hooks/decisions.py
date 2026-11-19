@@ -112,12 +112,29 @@ _SEPARATORS = re.compile(r"&&|\|\||;|\||\n|\$\(|`")
 _ENV_WORD = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S*")
 
 
+_WRAPPERS = ("sudo", "env", "time", "nohup")
+
+
 def command_segments(command: str) -> list[str]:
+    """Each simple command, without leading `VAR=value` words and the
+    wrappers `sudo`, `env`, `time` and `nohup` (with their options), and
+    with an absolute program path reduced to its name."""
     segments = []
     for part in _SEPARATORS.split(command):
         words = part.split()
-        while words and (_ENV_WORD.fullmatch(words[0]) or words[0] == "sudo"):
-            words.pop(0)
+        wrapped = False
+        while words:
+            if words[0] in _WRAPPERS:
+                wrapped = True
+                words.pop(0)
+            elif _ENV_WORD.fullmatch(words[0]):
+                words.pop(0)
+            elif wrapped and words[0].startswith("-") and len(words) > 1:
+                words.pop(0)  # a wrapper's option, e.g. `time -p`, `env -i`
+            else:
+                break
+        if words and words[0].startswith("/"):
+            words[0] = words[0].rstrip("/").rsplit("/", 1)[-1] or words[0]
         if words:
             segments.append(" ".join(words))
     return segments
@@ -125,7 +142,10 @@ def command_segments(command: str) -> list[str]:
 
 def _command_match(pattern: str, segment: str) -> bool:
     regex = ".*".join(re.escape(p) for p in pattern.split("*"))
-    return re.fullmatch(regex, segment) is not None
+    if re.fullmatch(regex, segment) is not None:
+        return True
+    # `prog *` also covers the bare program.
+    return pattern.endswith(" *") and segment == pattern[:-2]
 
 
 def in_scope_command(d: Decision, command: str) -> bool:
@@ -342,13 +362,21 @@ def _tracked_files(directory: Path, cache: dict) -> tuple[str, set[str]] | None:
 
 def lint_corpus(corpus: Corpus, project: Path) -> tuple[list[str], list[str]]:
     """(errors, warnings) as plain messages, without an `error:` prefix."""
+    located, warnings = lint_corpus_located(corpus, project)
+    return [m for m, _sources in located], warnings
+
+
+def lint_corpus_located(
+    corpus: Corpus, project: Path
+) -> tuple[list[tuple[str, list[Path]]], list[str]]:
+    """Like lint_corpus, each error paired with the files it is about."""
     project = Path(project)
-    errors: list[str] = []
+    errors: list[tuple[str, list[Path]]] = []
     warnings: list[str] = []
     where = lambda d: _display(d.source, project)  # noqa: E731
 
     for e in corpus.errors:
-        errors.append(f"{_display(e.path, project)}:{e.line}: {e.message}")
+        errors.append((f"{_display(e.path, project)}:{e.line}: {e.message}", [e.path]))
     for root in corpus.missing_roots:
         warnings.append(f"configured decision root not found: {root}")
 
@@ -358,20 +386,30 @@ def lint_corpus(corpus: Corpus, project: Path) -> tuple[list[str], list[str]]:
     for id, found in sorted(by_id.items()):
         if len(found) > 1:
             files = ", ".join(sorted({where(d) for d in found}))
-            errors.append(f"duplicate id {id} in {files}")
+            errors.append((f"duplicate id {id} in {files}", [d.source for d in found]))
 
     for d in corpus.decisions:
         for field_name in ("depends_on", "supersedes", "amends"):
             for target in getattr(d, field_name):
                 if target not in by_id:
-                    errors.append(f"{where(d)}: {d.id} {field_name} unknown decision {target}")
+                    errors.append(
+                        (f"{where(d)}: {d.id} {field_name} unknown decision {target}", [d.source])
+                    )
+        for target in d.supersedes if d.status in CURRENT else ():
+            for t in by_id.get(target, []):
+                if t.status in CURRENT:
+                    errors.append((
+                        f"{where(d)}: {d.id} supersedes {target}, which is still {t.status}",
+                        [d.source, t.source],
+                    ))
         if d.status in CURRENT:
             for target in d.depends_on:
                 for t in by_id.get(target, []):
                     if t.status in ("superseded", "retired"):
-                        errors.append(
-                            f"{where(d)}: {d.id} is current but depends on {t.status} {target}"
-                        )
+                        errors.append((
+                            f"{where(d)}: {d.id} is current but depends on {t.status} {target}",
+                            [d.source],
+                        ))
         if d.status in ("superseded", "retired", "rejected"):
             for target in d.amends:
                 for t in by_id.get(target, []):
@@ -500,8 +538,14 @@ def _cmd_session_start(corpus: Corpus, project: Path) -> int:
         event = {}
     git_dir = delivery.find_git_dir(project)
     key = delivery.context_key(event)
+    # The index and always-on text are printed whatever happens to the
+    # delivery state; a state failure is one notice line.
+    failure: Exception | None = None
     if git_dir is not None and event.get("source") in ("compact", "resume", "clear"):
-        delivery.reset_session(git_dir, str(event.get("session_id") or "nosession"))
+        try:
+            delivery.reset_session(git_dir, str(event.get("session_id") or "nosession"))
+        except Exception as e:  # noqa: BLE001
+            failure = e
     print("## Decisions in this repo")
     print()
     print(render_index(corpus))
@@ -509,8 +553,17 @@ def _cmd_session_start(corpus: Corpus, project: Path) -> int:
     if always:
         print()
         print(delivery.render_delivery(always, corpus))
-        if git_dir is not None:
-            delivery.record(git_dir, key, {d.id: d.version for d in always})
+        if git_dir is not None and failure is None:
+            try:
+                delivery.record(git_dir, key, {d.id: d.version for d in always})
+            except Exception as e:  # noqa: BLE001
+                failure = e
+    if failure is not None:
+        print()
+        print(
+            f"(Decision delivery state ({delivery.STATE} in the Git dir) could not be "
+            f"updated: {type(failure).__name__}; decisions may be delivered again.)"
+        )
     return 0
 
 

@@ -18,10 +18,18 @@ so decisions are delivered again rather than skipped.
 This runs on every tool call, so it exits at once when nothing applies and
 never blocks a call because of its own failure: an internal error prints
 a systemMessage naming `decisions.py lint` and allows the call.
+
+A PreToolUse call that guard.py denies isn't the action that will run,
+so delivery runs the guard on the same event first and, on a deny,
+neither records nor denies (the guard's own hook denies it). A guard
+that fails, times out or prints nothing never holds delivery back.
 """
+
+from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from pathlib import Path
 
@@ -32,6 +40,8 @@ POST_TOOLS = ("Read", "Edit", "Write", "MultiEdit", "NotebookEdit")
 PER_DECISION_CAP = 4000
 TOTAL_CAP = 12000
 CLOSING = "Delivered once. Retry the action if it complies; otherwise change it."
+GUARD = Path(__file__).resolve().parent / "guard.py"
+GUARD_TIMEOUT = 5
 
 
 def context_key(event: dict) -> str:
@@ -196,6 +206,25 @@ def target(event: dict) -> tuple[list[Path], list[str]]:
     return [path], []
 
 
+def guard_denies(event: dict) -> bool:
+    """True only when guard.py clearly denies this event."""
+    try:
+        done = subprocess.run(
+            [sys.executable, str(GUARD)],
+            input=json.dumps(event),
+            capture_output=True,
+            text=True,
+            timeout=GUARD_TIMEOUT,
+        )
+        out = json.loads(done.stdout) if done.stdout.strip() else None
+    except Exception:  # noqa: BLE001 - a guard problem never holds delivery back
+        return False
+    if not isinstance(out, dict):
+        return False
+    specific = out.get("hookSpecificOutput")
+    return isinstance(specific, dict) and specific.get("permissionDecision") == "deny"
+
+
 def decide(event: dict) -> dict | None:
     name = event.get("hook_event_name")
     tool = event.get("tool_name")
@@ -232,6 +261,8 @@ def decide(event: dict) -> dict | None:
         pending.extend(unit)
     if not pending:
         return None
+    if pre and guard_denies(event):
+        return None  # not the action that will run; deliver on the next one
     text = render_delivery(pending, corpus)
     record(git_dir, key, {d.id: d.version for d in pending})  # before any deny
     if pre:
