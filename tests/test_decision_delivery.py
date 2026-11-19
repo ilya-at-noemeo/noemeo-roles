@@ -430,10 +430,10 @@ class GuardOverlap(Project):
         state_file = self.project / ".git" / STATE
         if state_file.exists():
             self.assertNotIn("acme-0001", self.state().get("s1", {}))
-        out = self.pre("Bash", "terraform plan --profile acme-dev")
+        out = self.pre("Bash", "AWS_PROFILE=acme-dev terraform plan")
         self.assertEqual(verdict(out), "deny")
         self.assertIn("Plan with the acme account.", reason(out))
-        self.assertIsNone(verdict(self.pre("Bash", "terraform plan --profile acme-dev")))
+        self.assertIsNone(verdict(self.pre("Bash", "AWS_PROFILE=acme-dev terraform plan")))
 
 
 class Python39(Project):
