@@ -65,6 +65,15 @@ def denied(output):
     ))
 
 
+def deliver(event, cwd, project):
+    """Decision delivery; its own failure is a notice, never a denial."""
+    try:
+        return run("decision_delivery.py", event, cwd, project)
+    except Exception as error:
+        return {"systemMessage": f"Decision delivery failed ({error}); the action was not blocked. "
+                                 "Run decisions.py lint."}
+
+
 def dispatch(event):
     kind = event["hook_event_name"]
     cwd = Path(event["cwd"])
@@ -94,21 +103,29 @@ def dispatch(event):
                 output = guard(write, cwd, projects)
                 if denied(output):
                     return output
+            notices = []
             for write in writes:
-                output = run("decision_delivery.py", write, cwd, project)
+                output = deliver(write, cwd, project)
                 if denied(output):
                     return output
-            return None
+                if output and output.get("systemMessage"):
+                    notices.append(output["systemMessage"])
+            return {"systemMessage": "\n".join(notices)} if notices else None
         output = guard(event, cwd, projects)
         if denied(output):
             return output
+        notice = None
         if name in ("Bash", "Write", "Edit", "MultiEdit", "NotebookEdit"):
             # Its own failure is a systemMessage, which is not a denial.
-            output = run("decision_delivery.py", event, cwd, project)
+            output = deliver(event, cwd, project)
             if denied(output):
                 return output
+            notice = output if output and output.get("systemMessage") else None
         if name == "Bash":
-            return run("review_gate.py", event, cwd, project)
+            gate = run("review_gate.py", event, cwd, project)
+            return gate or notice
+        if notice:
+            return notice
     if kind == "PostToolUse" and name in ("apply_patch", "Write", "Edit", "MultiEdit"):
         paths = patch_paths(data.get("command", data.get("input", ""))) if name == "apply_patch" else [data.get("file_path", "")]
         tool = "Write" if name == "apply_patch" else name
@@ -120,7 +137,7 @@ def dispatch(event):
             output = run("ruff_touched_file.sh", {**event, "tool_input": {"file_path": path}}, cwd, project)
             if output:
                 messages.append(output.get("reason") or output.get("systemMessage", ""))
-            output = run("decision_delivery.py", file_event, cwd, project)
+            output = deliver(file_event, cwd, project)
             if output and output.get("decision") == "block":
                 messages.append(output.get("reason", ""))
             elif output and output.get("systemMessage"):
