@@ -228,7 +228,8 @@ class CodexDecisionsTest(unittest.TestCase):
         self.assertLess(calls.index("decision_delivery.py"), calls.index("review_gate.py"))
 
     def test_guard_denial_still_wins_over_delivery(self):
-        self.decision("acme-0001", "Keep widgets sorted.", paths=["**"], commands=["rm *", "acme-cli *"])
+        self.decision("acme-0001", "Keep widgets sorted.", paths=["**"])
+        self.decision("acme-0006", "Mind the acme shell.", commands=["rm *", "acme-cli *"])
         for tool, tool_input in (
             ("apply_patch", self.patch(".env")),
             ("Bash", {"command": "rm -rf sandbox"}),
@@ -237,10 +238,11 @@ class CodexDecisionsTest(unittest.TestCase):
                 output = self.pre(tool, tool_input)
                 self.assertTrue(adapter.denied(output))
                 self.assertNotIn("Keep widgets sorted.", self.reason(output))
+                self.assertNotIn("Mind the acme shell.", self.reason(output))
         # The guard's denial did not use up the delivery.
         self.assertIn("Keep widgets sorted.",
                       self.reason(self.pre("apply_patch", self.patch("src/a.py"))))
-        self.assertIn("Keep widgets sorted.",
+        self.assertIn("Mind the acme shell.",
                       self.reason(self.pre("Bash", {"command": "acme-cli sync"})))
 
     def test_delivery_failure_does_not_deny(self):
