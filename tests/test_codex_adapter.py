@@ -6,6 +6,7 @@ import io
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -256,6 +257,69 @@ class CodexDecisionsTest(unittest.TestCase):
             input=json.dumps(event), text=True, capture_output=True, check=True)
         self.assertFalse(adapter.denied(json.loads(done.stdout) if done.stdout.strip() else None))
         self.assertNotIn("could not verify policy", done.stdout)
+
+    def hooks_copy(self, name, body):
+        """A copy of hooks/ in which `name` is replaced by `body`."""
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        copy = Path(tmp.name) / "hooks"
+        shutil.copytree(ROOT / "hooks", copy, ignore=shutil.ignore_patterns("__pycache__"))
+        (copy / name).write_text(body)
+        return copy
+
+    def through_main(self, event, hooks):
+        """What the adapter prints for an event, as Codex would receive it."""
+        out = io.StringIO()
+        with patch.object(adapter, "HOOKS", hooks), \
+                patch.object(sys, "stdin", io.StringIO(json.dumps(event))), \
+                contextlib.redirect_stdout(out):
+            adapter.main()
+        return json.loads(out.getvalue()) if out.getvalue().strip() else None
+
+    BROKEN = {
+        "exit non-zero": "import sys\nsys.stderr.write('boom')\nsys.exit(3)\n",
+        "non-JSON output": "print('this is not json')\n",
+    }
+
+    def test_delivery_hook_failure_never_denies_or_blocks(self):
+        self.decision("acme-0001", "Keep widgets sorted.", binding=False, paths=["src/**"])
+        for label, body in self.BROKEN.items():
+            hooks = self.hooks_copy("decision_delivery.py", body)
+            for kind, tool, tool_input in (
+                ("PreToolUse", "Edit", {"file_path": str(self.project / "src/a.py")}),
+                ("PreToolUse", "apply_patch", self.patch("src/a.py")),
+                ("PostToolUse", "Edit", {"file_path": str(self.project / "src/a.py")}),
+                ("PostToolUse", "apply_patch", self.patch("src/a.py")),
+            ):
+                with self.subTest(failure=label, kind=kind, tool=tool):
+                    output = self.through_main(self.event(kind, tool, tool_input), hooks)
+                    self.assertFalse(adapter.denied(output), output)
+                    self.assertNotIn("could not verify policy", json.dumps(output))
+                    self.assertIn("delivery failed", output["systemMessage"].lower())
+
+    def test_guard_hook_failure_still_denies(self):
+        for label, body in self.BROKEN.items():
+            hooks = self.hooks_copy("guard.py", body)
+            for tool, tool_input in (
+                ("Edit", {"file_path": str(self.project / "src/a.py")}),
+                ("apply_patch", self.patch("src/a.py")),
+                ("Bash", {"command": "git status"}),
+            ):
+                with self.subTest(failure=label, tool=tool):
+                    output = self.through_main(self.event("PreToolUse", tool, tool_input), hooks)
+                    self.assertTrue(adapter.denied(output), output)
+
+    def test_delivery_internal_failure_message_reaches_the_caller_on_pre(self):
+        self.decision("acme-0001", "Keep widgets sorted.", paths=["src/**"])
+        (self.project / ".git/noemeo-decisions-delivered.json").mkdir()
+        for tool, tool_input in (
+            ("apply_patch", self.patch("src/a.py")),
+            ("Edit", {"file_path": str(self.project / "src/a.py")}),
+        ):
+            with self.subTest(tool=tool):
+                output = self.pre(tool, tool_input)
+                self.assertFalse(adapter.denied(output))
+                self.assertIn("delivery failed", output["systemMessage"].lower())
 
     def test_post_patch_feedback_combines_ruff_and_decisions(self):
         self.install_fake_ruff()
