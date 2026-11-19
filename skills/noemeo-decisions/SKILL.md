@@ -72,7 +72,17 @@ Whenever a decision is amended, superseded or retired:
 3. Set the replaced decision's status to `superseded` (or `retired`) in
    the same change as the new one.
 
-## Step 5: Lint
+## Step 5: Instruction files
+
+A rule has one home: its decision. When a recorded decision covers a
+rule already written in the repo's `CLAUDE.md` or `AGENTS.md`, propose
+replacing that text with a one-line reference to the decision's id
+(and rewriting any reference by bare number, "decision 0008", to the
+id). Those files load in full every session and would win over the
+decision. The owner approves the edit; AGENTS.md belongs to Codex users,
+so edit it only with the owner's go.
+
+## Step 6: Lint
 
 Run `decisions.py lint` before you finish. Fix every error. Report the
 warnings you leave and why.

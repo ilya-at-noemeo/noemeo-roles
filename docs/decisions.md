@@ -154,8 +154,9 @@ front matter.
   groups, after a wrapper option that takes an argument (`env -u NAME`,
   `sudo -u USER`),
   or after a quoted value with spaces (`AWS_PROFILE="a b" terraform`).
-- At stop, lint errors block only in decision roots inside the repo;
-  errors in a root outside it (a sibling checkout) are one notice line.
+- At stop, lint errors block only in files inside the repo (decision
+  roots and instruction files); errors in a root outside it (a sibling
+  checkout) are one notice line.
 - Codex gaps are in [codex.md](codex.md).
 
 ## Command line
@@ -179,7 +180,42 @@ depends on a superseded or retired one, and a current decision that
 supersedes one that is still current. It warns about a record without
 front matter, an empty summary or delivered text, `paths` that match no
 tracked file, and an amended original whose amendment is no longer
-current. Run it in the repo's checks.
+current. It also checks the instruction files (see below). Run it in
+the repo's checks.
+
+## CLAUDE.md and AGENTS.md
+
+The harness loads CLAUDE.md (Claude Code) and AGENTS.md (Codex) in full
+at every session start, framed as overriding the model's defaults;
+decisions arrive later, as hook context. So when an instruction file
+repeats or contradicts a decision, or still cites a superseded one, the
+instruction file wins.
+
+The rule is one home per rule: a rule lives only in its decision. An
+instruction file may refer to a decision by its id, never restate it.
+What stays in instruction files is orientation: what the repo is, its
+layout, build and test commands, hazards that aren't decisions, and a
+pointer to where the decisions live.
+
+Where decision roots are configured, `lint` reads every file named
+`CLAUDE.md` or `AGENTS.md` under the project, at any depth and whether
+tracked or not, skipping `.git`, `node_modules`, `.venv`, `venv` and
+`__pycache__`. A known decision id counts as a reference when it stands
+as a whole token (code spans included); matching is case-sensitive.
+
+- **Error:** a reference to a `superseded`, `retired` or `rejected`
+  decision, naming the current decision that supersedes it if there is
+  one. The error is located in the instruction file, so at stop it
+  blocks when that file is in the repo.
+- **Warning:** a reference to a `proposed` or `open` decision (not
+  accepted).
+- **Warning:** a decision referred to by number ("decision 0008") when
+  the number isn't itself an id, one per line: use the id so lint can
+  check it.
+
+Lint doesn't detect a restated or contradicted rule; that is caught in
+review (`noemeo-design-review` checks changes to instruction files
+against the resolved decisions).
 
 ## Manual editing
 

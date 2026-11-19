@@ -86,6 +86,16 @@ Pay particular attention to:
 - product names or links appearing in generic repos (0004);
 - new capabilities without a named forcing case (0003).
 
+**Instruction files.** When the change touches a `CLAUDE.md` or
+`AGENTS.md`, check that text against the resolved decisions. These
+files load in full every session and win over hook-delivered
+decisions, so a rule has one home: its decision. Flag text that
+restates or contradicts a decision instead of referring to its id
+(suggest the one-line reference as the fix), and references to a
+decision that isn't current (superseded, retired, rejected, or still
+proposed or open) or that cite it by bare number instead of its id.
+`decisions.py lint` catches the references, not the restatements.
+
 ## Step 4: Report
 
 Start with one line: the target reviewed and which rule sources were
