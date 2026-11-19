@@ -216,6 +216,20 @@ class Commands(Fixture):
         self.assertFalse(in_scope_command(aws, "cd infra && terraform plan"))
         self.assertFalse(in_scope_command(tf, "echo terraform plan"))
 
+    def test_command_scope_bare_command_and_wrappers(self):
+        self.decision("acme-1", commands=["terraform *"])
+        tf = self.one("acme-1")
+        for command in (
+            "terraform",
+            "env AWS_PROFILE=x terraform plan",
+            "time terraform plan",
+            "nohup terraform plan",
+            "/usr/local/bin/terraform plan",
+        ):
+            with self.subTest(command):
+                self.assertTrue(in_scope_command(tf, command))
+        self.assertFalse(in_scope_command(tf, "echo terraform plan"))
+
     def test_decision_without_commands_never_matches_a_command(self):
         self.decision("acme-1", paths=["src/**"])
         self.assertFalse(in_scope_command(self.one("acme-1"), "aws s3 ls"))

@@ -238,6 +238,34 @@ class StopLint(HookCase):
         self.assertIn("decisions", lines[0])
         self.assertIn("lint", lines[0])
 
+    def test_lint_error_outside_the_repo_does_not_block_but_is_noticed(self) -> None:
+        outside = self.repo.parent / "widget" / "decisions"
+        self.config({"decision_roots": ["../widget/decisions"]})
+        decision(self.repo.parent / "widget", "decisions/a.md", "widget-dup")
+        decision(self.repo.parent / "widget", "decisions/b.md", "widget-dup")
+        self.assertTrue(outside.is_dir())
+        proc = subprocess.run(
+            [sys.executable, str(HOOK)],
+            input=json.dumps({"session_id": "s1", "stop_hook_active": False}),
+            capture_output=True, text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.repo)),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if proc.stdout.strip():
+            self.assertNotEqual(json.loads(proc.stdout).get("decision"), "block", proc.stdout)
+        lines = [ln for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 1, proc.stdout + proc.stderr)
+        self.assertIn("widget", lines[0])
+
+    def test_lint_error_in_a_root_inside_the_repo_still_blocks_beside_an_outside_root(self) -> None:
+        self.config({"decision_roots": ["docs/decisions", "../widget/decisions"]})
+        decision(self.repo, "docs/decisions/a.md", "acme-dup")
+        decision(self.repo, "docs/decisions/b.md", "acme-dup")
+        decision(self.repo.parent / "widget", "decisions/c.md", "widget-ok")
+        out = json.loads(self.run_hook())
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("acme-dup", out["reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

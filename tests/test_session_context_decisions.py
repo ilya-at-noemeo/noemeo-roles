@@ -78,7 +78,7 @@ class SessionStart(unittest.TestCase):
         path.write_text(f"---\n{front}\n---\n# Record {id}\n\n## How to apply\n{body}\n")
         return path
 
-    def start(self, source="startup", session="s1"):
+    def start(self, source="startup", session="s1", raw=None):
         event = {"hook_event_name": "SessionStart", "session_id": session, "source": source}
         env = {
             "PATH": str(self.bin),
@@ -87,13 +87,14 @@ class SessionStart(unittest.TestCase):
         }
         done = subprocess.run(
             ["bash", str(SCRIPT)],
-            input=json.dumps(event),
+            input=json.dumps(event) if raw is None else raw,
             capture_output=True,
             text=True,
             env=env,
             cwd=str(self.project),
         )
         self.assertEqual(done.returncode, 0, done.stderr)
+        self.last_stderr = done.stderr
         return done.stdout
 
     def state_path(self):
@@ -179,6 +180,41 @@ class SessionStart(unittest.TestCase):
         out = self.start()
         self.assertIn("## Repo state at session start", out)
         self.assertNotIn(HEADING, out)
+
+    @unittest.skipIf(hasattr(os, "geteuid") and os.geteuid() == 0, "root reads any file")
+    def test_unreadable_state_still_prints_index_and_always_text_with_a_notice(self):
+        self.decision("0001-widgets", "Paint every widget blue.", summary="Widgets are blue",
+                      always=True)
+        self.seed({"s2": {"keep": "v4"}})
+        self.state_path().chmod(0o000)
+        self.addCleanup(self.state_path().chmod, 0o644)
+        for source in ("startup", "compact"):  # record fails; reset fails
+            with self.subTest(source=source):
+                out = self.start(source)
+                self.assertIn(HEADING, out)
+                self.assertIn("- 0001-widgets: Widgets are blue", out)
+                self.assertIn("Paint every widget blue.", out)
+                notice = [ln for ln in (out + self.last_stderr).splitlines()
+                          if "delivery state" in ln.lower()]
+                self.assertEqual(len(notice), 1, out + self.last_stderr)
+
+    def test_empty_or_bare_stdin_still_prints_the_index_and_keeps_other_sessions(self):
+        self.decision("0001-widgets", "Paint every widget blue.", summary="Widgets are blue",
+                      always=True)
+        cases = {
+            "empty stdin": "",
+            "empty object": "{}",
+            "no session id": json.dumps({"hook_event_name": "SessionStart", "source": "compact"}),
+        }
+        for name, raw in cases.items():
+            with self.subTest(name):
+                self.seed({"s2": {"keep": "v4"}, "s2/a1": {"keep": "v5"}})
+                out = self.start(raw=raw)
+                self.assertIn("- 0001-widgets: Widgets are blue", out)
+                self.assertIn("Paint every widget blue.", out)
+                state = self.state()
+                self.assertEqual(state["s2"], {"keep": "v4"})
+                self.assertEqual(state["s2/a1"], {"keep": "v5"})
 
 
 if __name__ == "__main__":

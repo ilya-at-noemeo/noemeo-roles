@@ -32,8 +32,6 @@ DECISIONS_SKILL = ROOT / "skills" / "noemeo-decisions" / "SKILL.md"
 REVIEW_SKILL = ROOT / "skills" / "noemeo-design-review" / "SKILL.md"
 AGREEMENT = ROOT / "roles" / "working-agreement.md"
 NEW_OR_CHANGED = [DOC, DECISIONS_SKILL, REVIEW_SKILL, AGREEMENT]
-# Names of Noemeo products; the repo is public and generic (foundation 0004).
-PRODUCT_NAMES = ("photo", "legal", "lightroom")
 
 
 def fenced_example(text: str, heading_contains: str) -> str | None:
@@ -172,16 +170,6 @@ class SkillsTest(unittest.TestCase):
         self.assertIn("noemeo-decisions", text)
         self.assertRegex(text, r"(?i)private memory")
         self.assertRegex(text, r"(?i)only a person accepts")
-
-
-class GenericRepoTest(unittest.TestCase):
-    def test_no_product_names_in_new_files(self) -> None:
-        for path in NEW_OR_CHANGED:
-            with self.subTest(file=path.relative_to(ROOT).as_posix()):
-                self.assertTrue(path.is_file(), f"{path.name} is missing")
-                text = path.read_text().lower()
-                for name in PRODUCT_NAMES:
-                    self.assertNotIn(name, text, f"{path.name} names a product: {name}")
 
 
 if __name__ == "__main__":

@@ -152,6 +152,21 @@ class Lint(CliCase):
         self.assertEqual(self.lines(proc, "error:"), [])
         self.assertEqual(self.lines(proc, "warning:"), [])
 
+    def test_superseding_a_decision_that_is_still_current_is_an_error(self):
+        for old_status in ("accepted", "temporary"):
+            with self.subTest(old_status):
+                proc = self.lint_with({
+                    "docs/decisions/y.md": record("acme-y", status=old_status),
+                    "docs/decisions/x.md": record("acme-x", supersedes=["acme-y"]),
+                })
+                self.assertEqual(proc.returncode, 1, proc.stdout + proc.stderr)
+                self.assertTrue(self.has_line(proc, "error:", "acme-x", "acme-y"), proc.stdout)
+        proc = self.lint_with({
+            "docs/decisions/y.md": record("acme-y", status="superseded"),
+            "docs/decisions/x.md": record("acme-x", supersedes=["acme-y"]),
+        })
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+
     def test_errors(self):
         cases = {
             "duplicate id across roots": (

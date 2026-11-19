@@ -420,5 +420,42 @@ class Registration(unittest.TestCase):
         )
 
 
+class GuardOverlap(Project):
+    def test_a_call_the_guard_denies_does_not_consume_the_decision(self):
+        (self.project / ".claude" / "noemeo-guard.json").write_text(
+            json.dumps({"decision_roots": ["docs/decisions"], "aws_profiles": ["acme-dev"]})
+        )
+        self.decision("acme-0001", "Plan with the acme account.", commands=["terraform *"])
+        self.assertIsNone(verdict(self.pre("Bash", "terraform plan")))  # guard's call
+        state_file = self.project / ".git" / STATE
+        if state_file.exists():
+            self.assertNotIn("acme-0001", self.state().get("s1", {}))
+        out = self.pre("Bash", "terraform plan --profile acme-dev")
+        self.assertEqual(verdict(out), "deny")
+        self.assertIn("Plan with the acme account.", reason(out))
+        self.assertIsNone(verdict(self.pre("Bash", "terraform plan --profile acme-dev")))
+
+
+class Python39(Project):
+    def test_runs_under_python_3_9_syntax_rules(self):
+        py = "/usr/bin/python3"
+        if not os.path.exists(py):
+            self.skipTest("no /usr/bin/python3 to check Python 3.9 against")
+        version = subprocess.run([py, "-c", "import sys;print(sys.version_info[:2]==(3,9))"],
+                                 capture_output=True, text=True).stdout.strip()
+        if version != "True":
+            self.skipTest("/usr/bin/python3 is not Python 3.9")
+        self.decision("acme-0001", "Obey acme.", paths=["src/**"])
+        done = subprocess.run(
+            [py, str(HOOK)],
+            input=json.dumps(self.event("PreToolUse", "Edit", "src/a.py")),
+            capture_output=True, text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(self.project)),
+            cwd=str(self.project),
+        )
+        self.assertNotIn("Traceback", done.stderr)
+        self.assertEqual(verdict(json.loads(done.stdout)), "deny", done.stdout + done.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
