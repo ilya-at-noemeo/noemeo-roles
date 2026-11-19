@@ -696,6 +696,16 @@ Not code: this is the rollout the spec describes. Starts only after
 Task 7's PR is merged and the plugin's installed copy is updated
 (`docs/plugin.md`), then a new session is started.
 
+Settled before it starts (owner, 2026-11-19):
+- **Ids** are `<log>-NNNN`: the log's short name and the record's
+  existing number, so the product log's 0007 and the generic log's
+  0007 stay distinct. Numbers never change.
+- **The generic decision log gets front matter too**, in the same
+  format: every record meant for the harness follows one format.
+- **The first record comes through an open PR** that already changes
+  it, so annotating it and checking that PR against the accepted
+  decisions happen together.
+
 - [ ] **Step 1: Configure roots**: the repo's `docs/decisions`, its
   architecture and product documents, and the sibling generic decision
   log. Start a session; confirm the index appears and lists every record
@@ -710,7 +720,15 @@ Task 7's PR is merged and the plugin's installed copy is updated
 - [ ] **Step 4: Annotate one record at a time.** With the noemeo-decisions
   skill, draft front matter for one record (scope, kind, binding), show
   it to the owner, and set `accepted` only after the owner approves.
-  Run `lint`. Commit each approved record on its own.
+  Run `lint`. Commit each approved record on its own. Check what will
+  be delivered (`show`): a binding rule that lives only in a long
+  "Decision" section is cut at the per-decision cap or not delivered
+  by default; name it in "Review checks" or set `deliver`.
+- [ ] **Step 4a: Check consistency with accepted decisions,** including
+  those accepted but not yet shipped (a phased decision's target, not
+  only today's code). Each new or changed decision, and each PR that
+  changes one, is reviewed against all of them before it's accepted.
+  Record what the review found that the PR's own reviews had missed.
 - [ ] **Step 5: Replace restated rules with references.** For each (a)
   or (b) rule whose decision is accepted, replace the instruction-file
   text with a one-line reference by id, and rewrite numbered
@@ -720,11 +738,34 @@ Task 7's PR is merged and the plugin's installed copy is updated
   scope of an accepted binding decision are refused once with its text,
   then go through.
 - [ ] **Step 7: Measure again**: the same two sizes as Step 2.
+- [ ] **Step 7a: Generate an architecture view** from the annotated
+  decisions plus the code and infra, on demand: every statement cites
+  a decision id or a file, "decided" is kept apart from "built" (a
+  phased decision's target versus what exists), and it is stamped with
+  the commits it was built from. It is a view, never delivered to the
+  harness and never edited by hand. Compare it with the repo's
+  hand-written architecture document: what each has that the other
+  lacks, and what is wrong in either. Decide with the owner whether
+  the hand-written one can retire.
 - [ ] **Step 8: PR** after noemeo-code-reviewer's Ready verdict, when
   the owner asks.
 
 Exit criterion: `lint` is clean on the instruction files (no errors, no
 numbered-reference warnings).
+
+### Task 9: Consolidating amendments (noemeo-decisions skill)
+
+Amendments stay: an amending decision is a unit of work an agent can
+be given ("implement 0013"), it carries its own reasons, and a phased
+amendment lets "true today" and "decided for later" both be stated.
+Their cost is that a current rule is spread over several records.
+
+- [ ] Add to `skills/noemeo-decisions/SKILL.md`: when a decision has
+  several current amendments, or a phased amendment has fully landed,
+  propose a new decision that supersedes the original with the merged
+  text. Never merge amendments into accepted text in place. The owner
+  accepts the consolidation like any decision.
+- [ ] Test (`tests/test_decisions_docs.py`): the skill states the rule.
 
 The replay measurement (spec, "Measurement") is a separate study run
 with noemeo-researcher once enough records are annotated; it doesn't
