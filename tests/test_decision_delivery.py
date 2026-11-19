@@ -437,7 +437,9 @@ class GuardOverlap(Project):
 
 
 class Python39(Project):
-    def test_runs_under_python_3_9_syntax_rules(self):
+    def test_below_the_floor_it_warns_and_allows(self):
+        # The hooks need Python 3.12 (hooks/pyfloor.py); on 3.9 delivery
+        # warns with a systemMessage instead of crashing at import.
         py = "/usr/bin/python3"
         if not os.path.exists(py):
             self.skipTest("no /usr/bin/python3 to check Python 3.9 against")
@@ -454,8 +456,10 @@ class Python39(Project):
             cwd=str(self.project),
         )
         self.assertNotIn("Traceback", done.stderr)
-        self.assertEqual(verdict(json.loads(done.stdout)), "deny", done.stdout + done.stderr)
-
+        self.assertEqual(done.returncode, 0)
+        out = json.loads(done.stdout)
+        self.assertIsNone(verdict(out))
+        self.assertIn("needs Python 3.12 or newer", out["systemMessage"])
 
 if __name__ == "__main__":
     unittest.main()

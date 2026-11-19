@@ -1,24 +1,45 @@
 #!/usr/bin/env python3
 """Decisions as rules: load knowledge roots, match scope, resolve, index.
 
-Library part only. A decision's scope comes from its own fields, never
-from the folder it sits in. Every function here is meant to run from a
-hook on each tool call, so nothing shells out to Git: a repo's top level
-is the nearest ancestor holding `.git`, looked up once per directory.
+A decision's scope comes from its own fields, never from the folder it
+sits in. Loading, matching and resolving run from a hook on each tool
+call, so they never shell out to Git: a repo's top level is the nearest
+ancestor holding `.git`, looked up once per directory. Only `version_of`,
+`lint` and the command line's `--diff` run Git.
 """
 
-from __future__ import annotations
-
-import argparse
-import json
-import os
-import re
-import subprocess
 import sys
-from dataclasses import dataclass, field
 from pathlib import Path
 
-from decisions_format import CURRENT, Decision, FormatError, parse_file, title_of
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+# A hook reads stdout: session-start as text, subagent-start as JSON;
+# the command line (and an importer) gets stderr and exit 2.
+_FLOOR = next(
+    (a for a in sys.argv[1:] if a in ("session-start", "subagent-start")), ""
+) if __name__ == "__main__" else ""
+pyfloor.check(
+    {"session-start": "text", "subagent-start": "context"}.get(_FLOOR, "closed"),
+    "decisions.py",
+    "SubagentStart",
+)
+
+import argparse  # noqa: E402
+import json  # noqa: E402
+import os  # noqa: E402
+import re  # noqa: E402
+import subprocess  # noqa: E402
+from dataclasses import dataclass, field  # noqa: E402
+
+from decisions_format import (  # noqa: E402
+    CURRENT,
+    Decision,
+    FormatError,
+    parse_file,
+    parse_text,
+    title_of,
+)
 
 CONFIG = Path(".claude") / "noemeo-guard.json"
 
@@ -440,6 +461,79 @@ def lint_corpus_located(
     return errors, warnings
 
 
+# ---------------------------------------------------------------- version
+
+
+@dataclass(frozen=True)
+class Version:
+    """`commit`: first 12 hex of the commit that introduced the decision's
+    committed content, None when it was never committed. `drift`: the
+    working tree differs from that content (or nothing is committed)."""
+
+    commit: str | None
+    drift: bool
+
+
+def _same(a: Decision, b: Decision) -> bool:
+    return a.id == b.id and a.heading == b.heading
+
+
+def _hash_in(text: str, path: Path, d: Decision) -> str | None:
+    found, _errors = parse_text(text, path)
+    return next((x.content_hash for x in found if _same(x, d)), None)
+
+
+def version_of(d: Decision) -> Version:
+    """The commit that introduced `d`'s current committed content: walking
+    the file's history newest first, the oldest commit of the unbroken run
+    whose content hash equals the newest committed one. A section of a
+    longer document has its own version. Renames are not followed. Runs
+    Git; never raises (anything that fails is `Version(None, True)`)."""
+    unknown = Version(None, True)
+    try:
+        source = Path(d.source).resolve()
+        found, _errors = parse_file(source)
+        current = next((x.content_hash for x in found if _same(x, d)), None)
+        if current is None:
+            return unknown
+
+        def git(where: Path, *args: str) -> str:
+            return subprocess.run(
+                ["git", "-C", str(where), *args], capture_output=True, check=True
+            ).stdout.decode("utf-8")
+
+        top = Path(git(source.parent, "rev-parse", "--show-toplevel").strip()).resolve()
+        rel = source.relative_to(top).as_posix()
+        shas = git(top, "log", "--format=%H", "--", rel).split()
+        newest = version = None
+        for sha in shas:
+            try:
+                text = git(top, "show", f"{sha}:{rel}")
+            except subprocess.CalledProcessError:
+                break  # the path doesn't exist there
+            digest = _hash_in(text, source, d)
+            if newest is None:
+                if digest is None:
+                    return unknown  # the decision is new in the working tree
+                newest = digest
+            elif digest != newest:
+                break
+            version = sha
+        if version is None:
+            return unknown
+        return Version(version[:12], current != newest)
+    except Exception:  # noqa: BLE001 - outside Git, git missing, a bad repo
+        return unknown
+
+
+def describe_version(d: Decision) -> str:
+    """`<commit>`, `<commit>  (uncommitted changes)` or `none (not committed)`."""
+    v = version_of(d)
+    if v.commit is None:
+        return "none (not committed)"
+    return v.commit + ("  (uncommitted changes)" if v.drift else "")
+
+
 # ---------------------------------------------------------------- command line
 
 
@@ -457,17 +551,6 @@ def _diff_paths(project: Path, base: str) -> list[Path]:
         project, "ls-files", "-o", "--exclude-standard", "--full-name", "-z"
     ).split("\0")
     return [top / n for n in dict.fromkeys(changed + edited + untracked) if n]
-
-
-def _last_commit(d: Decision) -> str:
-    try:
-        out = subprocess.run(
-            ["git", "-C", str(d.source.parent), "log", "-1", "--format=%h", "--", d.source.name],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-    except (OSError, subprocess.CalledProcessError):
-        out = ""
-    return out or "uncommitted"
 
 
 def _cmd_resolve(corpus: Corpus, project: Path, args) -> int:
@@ -495,11 +578,9 @@ def _cmd_resolve(corpus: Corpus, project: Path, args) -> int:
                 found.append(dep)
                 queue.append(dep)
     for d in found:
-        head = f"## {d.id}  version {d.version}"
+        head = f"## {d.id}  version {describe_version(d)}"
         if id(d) in labels:
             head += f"  (dependency of {labels[id(d)]})"
-        if args.commits:
-            head += f"  commit {_last_commit(d)}"
         print(f"{head}  source {_display(d.source, project)}")
         print(d.text.strip())
         print()
@@ -513,57 +594,87 @@ def _cmd_show(corpus: Corpus, project: Path, args) -> int:
         return 1
     for d in found:
         print(f"## {d.id} ({d.status})  source {_display(d.source, project)}")
+        print(f"version: {describe_version(d)}")
         print(f"summary: {d.summary}")
         print(d.text.strip())
         print()
     return 0
 
 
-def _cmd_session_start(corpus: Corpus, project: Path) -> int:
-    """SessionStart: the index, then `always: true` decisions in full."""
-    import decision_delivery as delivery
-
+def _roots_configured(project: Path) -> bool:
     try:
         config = json.loads((project / CONFIG).read_text(encoding="utf-8"))
         roots = config.get("decision_roots")
     except (OSError, ValueError, AttributeError):
-        return 0
-    if not isinstance(roots, list) or not roots:
-        return 0
+        return False
+    return isinstance(roots, list) and bool(roots)
+
+
+def _read_event() -> dict:
     try:
         event = json.load(sys.stdin)
     except ValueError:
         event = {}
-    if not isinstance(event, dict):
-        event = {}
+    return event if isinstance(event, dict) else {}
+
+
+def start_context(corpus: Corpus, project: Path, event: dict, *, reset: bool) -> str:
+    """The index, then `always: true` decisions in full, recorded as
+    delivered under the event's context key. The text comes back whatever
+    happens to the delivery state; a state failure adds one notice line.
+    `reset`: a session that compacted, resumed or cleared forgets what it
+    (and its subagents) was shown."""
+    import decision_delivery as delivery
+
     git_dir = delivery.find_git_dir(project)
     key = delivery.context_key(event)
-    # The index and always-on text are printed whatever happens to the
-    # delivery state; a state failure is one notice line.
     failure: Exception | None = None
-    if git_dir is not None and event.get("source") in ("compact", "resume", "clear"):
+    if reset and git_dir is not None and event.get("source") in ("compact", "resume", "clear"):
         try:
             delivery.reset_session(git_dir, str(event.get("session_id") or "nosession"))
         except Exception as e:  # noqa: BLE001
             failure = e
-    print("## Decisions in this repo")
-    print()
-    print(render_index(corpus))
+    parts = ["## Decisions in this repo", "", render_index(corpus)]
     always = resolve(corpus)  # no paths, commands or tasks: only `always`
     if always:
-        print()
-        print(delivery.render_delivery(always, corpus))
+        parts += ["", delivery.render_delivery(always, corpus)]
         if git_dir is not None and failure is None:
             try:
-                delivery.record(git_dir, key, {d.id: d.version for d in always})
+                delivery.record(git_dir, key, {d.id: d.content_hash for d in always})
             except Exception as e:  # noqa: BLE001
                 failure = e
     if failure is not None:
-        print()
-        print(
+        parts += [
+            "",
             f"(Decision delivery state ({delivery.STATE} in the Git dir) could not be "
-            f"updated: {type(failure).__name__}; decisions may be delivered again.)"
-        )
+            f"updated: {type(failure).__name__}; decisions may be delivered again.)",
+        ]
+    return "\n".join(parts)
+
+
+def _cmd_session_start(project: Path) -> int:
+    """SessionStart: the context as plain text."""
+    if not _roots_configured(project):
+        return 0
+    event = _read_event()
+    print(start_context(load(project), project, event, reset=True))
+    return 0
+
+
+def _cmd_subagent_start(project: Path) -> int:
+    """SubagentStart: the same context as JSON additionalContext. Never
+    disturbs a subagent's start: any failure prints nothing."""
+    try:
+        if not _roots_configured(project):
+            return 0
+        event = _read_event()
+        text = start_context(load(project), project, event, reset=False)
+        out = json.dumps({"hookSpecificOutput": {
+            "hookEventName": "SubagentStart", "additionalContext": text,
+        }})
+    except Exception:  # noqa: BLE001
+        return 0
+    print(out)
     return 0
 
 
@@ -578,7 +689,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--command", action="append", default=[])
     p.add_argument("--task", action="append", default=[])
     p.add_argument("--diff", metavar="BASE", help="paths changed since BASE, plus untracked")
-    p.add_argument("--commits", action="store_true", help="add each source's last commit")
     p = sub.add_parser("deps", parents=[common], help="decisions that depend on or amend ID")
     p.add_argument("id")
     p = sub.add_parser("show", parents=[common], help="print a decision, whatever its status")
@@ -587,12 +697,17 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser(
         "session-start", parents=[common], help="session context: index and always-on decisions"
     )
+    sub.add_parser(
+        "subagent-start", parents=[common], help="the same context for a subagent, as hook JSON"
+    )
     args = parser.parse_args(argv)
 
     project = Path(getattr(args, "project", None) or os.environ.get("CLAUDE_PROJECT_DIR") or ".").resolve()
-    corpus = load(project)
     if args.cmd == "session-start":
-        return _cmd_session_start(corpus, project)
+        return _cmd_session_start(project)
+    if args.cmd == "subagent-start":
+        return _cmd_subagent_start(project)
+    corpus = load(project)
     if args.cmd == "index":
         print(render_index(corpus))
         return 0

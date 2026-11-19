@@ -3,7 +3,7 @@
 `decision_roots` in .claude/noemeo-guard.json.
 
 - PreToolUse (Bash and the edit tools): a binding decision in scope that
-  this context hasn't had at its current version denies the action once,
+  this context hasn't had with its current content denies the action once,
   with the decision's text. The retry passes.
 - PostToolUse (Read and the edit tools): every decision in scope not yet
   delivered arrives as feedback ({"decision": "block", "reason": ...}).
@@ -11,7 +11,7 @@
   decisions delivered that way count as delivered.
 
 State: `noemeo-decisions-delivered.json` in the Git dir,
-`{context_key: {decision_id: version}}`, where the key is the session id,
+`{context_key: {decision_id: content_hash}}`, where the key is the session id,
 plus `/agent_id` inside a subagent. A corrupt state file counts as empty,
 so decisions are delivered again rather than skipped.
 
@@ -25,13 +25,16 @@ neither records nor denies (the guard's own hook denies it). A guard
 that fails, times out or prints nothing never holds delivery back.
 """
 
-from __future__ import annotations
-
 import json
 import os
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("open", "decision_delivery.py")  # before anything that needs 3.12
 
 STATE = "noemeo-decisions-delivered.json"
 CONFIG = Path(".claude") / "noemeo-guard.json"
@@ -254,7 +257,7 @@ def decide(event: dict) -> dict | None:
     delivered = read_state(git_dir).get(key, {})
     pending = []
     for unit in units(corpus, resolved):
-        if all(delivered.get(d.id) == d.version for d in unit):
+        if all(delivered.get(d.id) == d.content_hash for d in unit):
             continue
         if pre and not any(d.binding for d in unit):
             continue
@@ -264,7 +267,7 @@ def decide(event: dict) -> dict | None:
     if pre and guard_denies(event):
         return None  # not the action that will run; deliver on the next one
     text = render_delivery(pending, corpus)
-    record(git_dir, key, {d.id: d.version for d in pending})  # before any deny
+    record(git_dir, key, {d.id: d.content_hash for d in pending})  # before any deny
     if pre:
         return {
             "hookSpecificOutput": {

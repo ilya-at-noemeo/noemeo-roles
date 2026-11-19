@@ -1,5 +1,5 @@
 {
-  "description": "Noemeo guard rails for every repo: deny destructive commands and secret access; repo state at session start; a PR only after noemeo-code-reviewer has reviewed the change as it is; each subagent's usage logged; in repos that opt in, ruff on each edited Python file and pytest before a turn can end; in repos that configure decision roots, binding decisions are delivered before an action in their scope and the rest after a read or edit.",
+  "description": "Noemeo guard rails for every repo: deny destructive commands and secret access; repo state at session start; a PR only after noemeo-code-reviewer has reviewed the change as it is; each subagent's usage logged; in repos that opt in, ruff on each edited Python file and pytest before a turn can end; in repos that configure decision roots, binding decisions are delivered before an action in their scope and the rest after a read or edit, and each subagent starts with the decision index and the always-on decisions.",
   "hooks": {
     "SessionStart": [
       {
@@ -7,6 +7,17 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session_context.sh",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/decisions.py subagent-start",
             "timeout": 15
           }
         ]

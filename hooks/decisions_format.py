@@ -20,8 +20,6 @@ errors, so a typo never silently drops a scope.
 file's other decisions are kept.
 """
 
-from __future__ import annotations
-
 import hashlib
 import json
 import re
@@ -78,7 +76,7 @@ class Decision:
     text: str
     source: Path
     heading: str | None
-    version: str
+    content_hash: str
 
 
 class FormatError(Exception):
@@ -90,7 +88,10 @@ class FormatError(Exception):
 
 
 def _read(path: Path) -> list[str]:
-    raw = Path(path).read_bytes().decode("utf-8")
+    return _lines(Path(path).read_bytes().decode("utf-8"))
+
+
+def _lines(raw: str) -> list[str]:
     if raw.startswith("﻿"):
         raw = raw[1:]
     return raw.replace("\r\n", "\n").replace("\r", "\n").split("\n")
@@ -295,7 +296,7 @@ def _finish(
     digest = hashlib.sha256(
         (json.dumps(data, sort_keys=True) + text).encode("utf-8")
     ).hexdigest()[:12]
-    return Decision(text=text, source=path, version=digest, **data)
+    return Decision(text=text, source=path, content_hash=digest, **data)
 
 
 def _section_end(heads: list[tuple[int, int, str]], pos: int, total: int) -> int:
@@ -387,9 +388,16 @@ def _parse_markers(
 def parse_file(path: Path) -> tuple[list[Decision], list[FormatError]]:
     path = Path(path)
     try:
-        lines = _read(path)
+        raw = path.read_bytes().decode("utf-8")
     except (OSError, UnicodeDecodeError) as e:
         return [], [FormatError(path, 1, f"cannot read file: {e}")]
+    return parse_text(raw, path)
+
+
+def parse_text(text: str, path: Path) -> tuple[list[Decision], list[FormatError]]:
+    """Parse `text` as the content of `path`; the file itself is not read."""
+    path = Path(path)
+    lines = _lines(text)
     decisions: list[Decision] = []
     errors: list[FormatError] = []
     start = 0
