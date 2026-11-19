@@ -326,10 +326,11 @@ class Show(CliCase):
 class ResolveCli(CliCase):
     def test_resolve_from_a_path_prints_id_version_source_and_text(self):
         d = next(d for d in load(self.acme).decisions if d.id == "acme-1")
+        base = git(self.acme, "rev-parse", "HEAD")[:12]
         proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        self.assertIn("acme-1", proc.stdout)
-        self.assertIn(d.version, proc.stdout)
+        self.assertIn(f"## acme-1  version {base}", proc.stdout)
+        self.assertNotIn(d.content_hash, proc.stdout)  # the hash is not the version
         self.assertIn("docs/decisions/acme-1.md", proc.stdout)
         self.assertIn("Do acme-1.", proc.stdout)
         # the amendment follows its original
@@ -361,35 +362,77 @@ class ResolveCli(CliCase):
         self.assertIn("acme-lib", proc.stdout)  # lib/new.py is untracked
         self.assertNotIn("acme-other", proc.stdout)  # other/x.py did not change
 
-    def test_commits_flag_adds_the_last_commit_of_each_source(self):
-        self.write("docs/decisions/first.md", record("acme-first", paths=["src/**"]))
-        git(self.acme, "add", "-A")
-        git(self.acme, "commit", "-q", "-m", "first")
-        first = git(self.acme, "rev-parse", "HEAD")
+    def head(self):
+        return git(self.acme, "rev-parse", "HEAD")[:12]
+
+    def header(self, proc, id):
+        return next(ln for ln in proc.stdout.splitlines() if ln.startswith(f"## {id}  "))
+
+    def test_resolve_header_shows_the_commit_that_introduced_each_decision(self):
+        base = self.head()
         self.write("docs/decisions/second.md", record("acme-second", paths=["src/**"]))
         git(self.acme, "add", "-A")
         git(self.acme, "commit", "-q", "-m", "second")
-        second = git(self.acme, "rev-parse", "HEAD")
-        self.assertNotEqual(first, second)
-        path = str(self.acme / "src" / "app.py")
-
-        plain = self.cli("resolve", "--path", path)
-        self.assertNotIn(first[:7], plain.stdout)
-        self.assertNotIn(second[:7], plain.stdout)
-
-        proc = self.cli("resolve", "--commits", "--path", path)
+        second = self.head()
+        self.assertNotEqual(base, second)
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
         self.assertEqual(proc.returncode, 0, proc.stderr)
-        by_id = {}
-        current = None
-        for ln in proc.stdout.splitlines():
-            for id in ("acme-first", "acme-second"):
-                if id in ln:
-                    current = id
-            if current:
-                by_id.setdefault(current, []).append(ln)
-        self.assertIn(first[:7], "\n".join(by_id["acme-first"]))
-        self.assertIn(second[:7], "\n".join(by_id["acme-second"]))
-        self.assertNotIn(second[:7], "\n".join(by_id["acme-first"]))
+        self.assertIn(f"## acme-1  version {base}", self.header(proc, "acme-1"))
+        self.assertIn(f"## acme-second  version {second}", self.header(proc, "acme-second"))
+        self.assertNotIn("uncommitted changes", proc.stdout)
+
+    def test_resolve_marks_uncommitted_edits(self):
+        base = self.head()
+        self.write("docs/decisions/acme-1.md", record("acme-1", paths=["src/**"]) + "\nMore.\n")
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
+        self.assertIn(f"## acme-1  version {base}  (uncommitted changes)", proc.stdout)
+
+    def test_resolve_marks_a_decision_that_was_never_committed(self):
+        self.write("docs/decisions/new.md", record("acme-new", paths=["src/**"]))
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
+        self.assertIn("## acme-new  version none (not committed)", proc.stdout)
+        self.assertNotIn("uncommitted changes", self.header(proc, "acme-new"))
+
+    def test_dependency_label_keeps_its_place_next_to_the_version(self):
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
+        # acme-2 amends and depends on acme-1; acme-3 is out of scope
+        self.assertIn(f"version {self.head()}", self.header(proc, "acme-2"))
+
+    def test_commits_flag_is_gone(self):
+        proc = self.cli("resolve", "--commits", "--path", str(self.acme / "src" / "app.py"))
+        self.assertNotEqual(proc.returncode, 0)
+        self.assertIn("--commits", proc.stderr)  # argparse: unrecognized arguments
+
+    def test_resolve_never_prints_the_content_hash(self):
+        proc = self.cli("resolve", "--path", str(self.acme / "src" / "app.py"))
+        for d in load(self.acme).decisions:
+            self.assertNotIn(d.content_hash, proc.stdout)
+
+    def test_show_prints_the_version_line_in_the_same_wording(self):
+        base = self.head()
+        proc = self.cli("show", "acme-1")
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        self.assertIn(f"version: {base}", proc.stdout.splitlines()[:4])
+        self.write("docs/decisions/acme-1.md", record("acme-1", paths=["src/**"]) + "\nMore.\n")
+        proc = self.cli("show", "acme-1")
+        self.assertIn(f"version: {base}  (uncommitted changes)", proc.stdout)
+        self.write("docs/decisions/new.md", record("acme-new"))
+        proc = self.cli("show", "acme-new")
+        self.assertIn("version: none (not committed)", proc.stdout)
+
+    def test_index_shows_no_version_or_hash(self):
+        proc = self.cli("index")
+        self.assertNotIn("version", proc.stdout.lower())
+        self.assertNotIn(self.head(), proc.stdout)
+        for d in load(self.acme).decisions:
+            self.assertNotIn(d.content_hash, proc.stdout)
+
+    def test_lint_does_not_treat_uncommitted_decisions_as_errors(self):
+        self.write("docs/decisions/new.md", record("acme-new"))
+        self.write("docs/decisions/acme-1.md", record("acme-1", paths=["src/**"]) + "\nMore.\n")
+        proc = self.cli("lint")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertNotIn("uncommitted", (proc.stdout + proc.stderr).lower())
 
     def branch_with_scopes(self):
         """main holds lib/ and other/ files with a decision each; feature is checked out."""

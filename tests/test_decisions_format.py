@@ -15,6 +15,7 @@ from pathlib import Path
 HOOKS = Path(__file__).resolve().parent.parent / "hooks"
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(HOOKS))
+import decisions_format  # noqa: E402
 from decisions_format import (  # noqa: E402
     CURRENT,
     KINDS,
@@ -120,8 +121,8 @@ class ParseRecord(TempCase):
         self.assertNotIn("## Decision", d.text)
         self.assertNotIn("Widgets are deployed", d.text)
         self.assertNotIn("Because the widget account", d.text)
-        self.assertEqual(len(d.version), 12)
-        int(d.version, 16)  # hex
+        self.assertEqual(len(d.content_hash), 12)
+        int(d.content_hash, 16)  # hex
 
     def test_decision_is_frozen(self):
         d = only(parse_file(self.write("0001-acme.md", RECORD)))
@@ -212,7 +213,7 @@ class ParseMarker(TempCase):
         self.assertIn("more", d.text)
         self.assertNotIn("not included", d.text)
         self.assertNotIn("kind: architecture", d.text)  # marker not delivered
-        self.assertEqual(len(d.version), 12)
+        self.assertEqual(len(d.content_hash), 12)
 
     def test_comment_line_inside_marker_is_not_a_heading(self):
         text = MARKER.replace("binding: false\n", "binding: false\n# a comment line\n")
@@ -338,11 +339,26 @@ class Errors(TempCase):
         self.assertEqual(parse_file(p), ([], []))
 
 
-class Version(TempCase):
-    def version(self, text, name="v.md"):
-        return only(parse_file(self.write(name, text))).version
+class ParseText(TempCase):
+    def test_parse_text_matches_parse_file(self):
+        for name, text in (("r.md", RECORD), ("m.md", MARKER)):
+            with self.subTest(name=name):
+                p = self.write(name, text)
+                self.assertEqual(decisions_format.parse_text(text, p), parse_file(p))
 
-    def test_version_changes_with_text_or_fields_only(self):
+    def test_parse_text_reads_no_file(self):
+        missing = self.root / "never-written.md"
+        decisions, errors = decisions_format.parse_text(RECORD, missing)
+        self.assertEqual(errors, [])
+        self.assertEqual(decisions[0].id, "acme-0001")
+        self.assertEqual(decisions[0].source, missing)
+
+
+class ContentHash(TempCase):
+    def version(self, text, name="v.md"):
+        return only(parse_file(self.write(name, text))).content_hash
+
+    def test_content_hash_changes_with_text_or_fields_only(self):
         base = self.version(RECORD)
         self.assertEqual(self.version(RECORD, "again.md"), base)  # stable, path-independent
 

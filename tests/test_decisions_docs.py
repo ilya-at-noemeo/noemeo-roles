@@ -161,7 +161,7 @@ class SkillsTest(unittest.TestCase):
         body = REVIEW_SKILL.read_text()
         self.assertIn("decision_roots", body)
         self.assertIn("resolve --diff", body)
-        self.assertIn("--commits", body)
+        self.assertNotIn("--commits", body)  # resolve prints the version itself
         self.assertRegex(body, r"(?i)versions?")
 
     def test_working_agreement_sends_settled_knowledge_to_decision_roots(self) -> None:
@@ -170,6 +170,48 @@ class SkillsTest(unittest.TestCase):
         self.assertIn("noemeo-decisions", text)
         self.assertRegex(text, r"(?i)private memory")
         self.assertRegex(text, r"(?i)only a person accepts")
+
+
+class FollowUpDocs(unittest.TestCase):
+    def test_no_doc_skill_or_hook_still_mentions_the_commits_flag(self) -> None:
+        for path in [*ROOT.glob("docs/*.md"), *ROOT.glob("skills/*/SKILL.md"),
+                     *HOOKS.glob("*.py"), ROOT / "README.md"]:
+            with self.subTest(path=path.name):
+                text = path.read_text()
+                self.assertNotIn("--commits", text)
+                self.assertNotIn("_last_commit", text)
+
+    def test_decisions_doc_defines_version_as_the_git_commit(self) -> None:
+        text = DOC.read_text()
+        self.assertRegex(text, r"(?i)version[^.\n]*(git )?commit")
+        self.assertRegex(text, r"(?i)content hash")
+        self.assertIn("uncommitted changes", text)
+        self.assertRegex(text, r"(?i)renames? (are )?not followed|not follow")
+
+    def test_subagents_get_the_index_now(self) -> None:
+        text = DOC.read_text()
+        self.assertNotRegex(text, r"(?i)subagents? get no index")
+        self.assertIn("subagent-start", text + (ROOT / "docs" / "hooks.md").read_text())
+        self.assertIn("SubagentStart", (ROOT / "docs" / "hooks.md").read_text())
+
+    def test_codex_doc_records_the_missing_subagent_start_as_a_gap(self) -> None:
+        text = (ROOT / "docs" / "codex.md").read_text()
+        gaps = text[text.index("Gaps:"):]
+        self.assertRegex(gaps, r"(?i)subagent-?start|subagent[^.]*index")
+
+    def test_python_floor_is_documented(self) -> None:
+        for path in (ROOT / "docs" / "hooks.md", ROOT / "README.md"):
+            with self.subTest(path=path.name):
+                text = path.read_text()
+                self.assertRegex(text, r"3\.12")
+                self.assertIn("python3 --version", text)
+        hooks = (ROOT / "docs" / "hooks.md").read_text()
+        self.assertIn("/usr/bin/python3", hooks)
+        self.assertRegex(hooks, r"(?i)3\.9")
+
+    def test_plugin_version_is_0_25_0(self) -> None:
+        manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
+        self.assertEqual(manifest["version"], "0.25.0")
 
 
 if __name__ == "__main__":

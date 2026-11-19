@@ -189,7 +189,7 @@ class Binding(Project):
             origin="owner-chat-2026", evidence=["measured-in-study-7"],
             summary="A summary line",
         )
-        version = next(d.version for d in load(self.project).decisions
+        version = next(d.content_hash for d in load(self.project).decisions
                        if d.id == "acme-0001")
         out = self.pre("Edit", "src/a.py")
         text = reason(out)
@@ -277,7 +277,7 @@ class Contexts(Project):
 
     def test_state_records_the_delivered_version_per_decision(self):
         self.pre("Edit", "src/a.py")
-        version = next(d.version for d in load(self.project).decisions)
+        version = next(d.content_hash for d in load(self.project).decisions)
         self.assertEqual(self.state(), {"s1": {"acme-0001": version}})
 
     def test_existing_state_of_other_contexts_is_kept(self):

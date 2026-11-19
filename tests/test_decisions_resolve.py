@@ -443,7 +443,7 @@ class Index(Fixture):
         self.assertEqual(
             self.lines(text), ["- acme-1: Pin the frobnicator → docs/decisions/acme-1.md"]
         )
-        for hidden in ("architecture", "binding", "version", d.version, "origin",
+        for hidden in ("architecture", "binding", "version", d.content_hash, "origin",
                        "somewhere-else", "src/**", "aws *", "paths", "commands",
                        "note-9", "acme-0", "accepted", "kind"):
             self.assertNotIn(hidden, text, hidden)
