@@ -70,9 +70,22 @@ scope. A decision with an error is dropped and the error is reported.
 Any one scope match puts an action in scope. A decision with no scope is
 never delivered by action; it is still in the index.
 
-A decision's version is a hash of its fields and delivered text. A
-change to either is a new version, so it is delivered again. Git history
-shows who changed it and when.
+A decision's version is the Git commit that introduced its current
+committed content: walking the file's history newest first, the oldest
+commit of the unbroken run in which the decision's fields and delivered
+text stayed as they are now. A decision that is a section of a longer
+document has its own version; edits elsewhere in the file don't move it.
+`resolve` and `show` print it (`version 3f9a1c2b07de`), with
+`(uncommitted changes)` when the working tree differs from the last
+committed content, and `version none (not committed)` for a decision
+that was never committed. Uncommitted decisions are normal while
+authoring; `lint` doesn't flag them. Renames are not followed: a
+decision moved to another file starts a new history there.
+
+Separately, a content hash of the fields and delivered text checks
+drift and triggers re-delivery: a change to either is delivered again,
+committed or not. Delivery never runs Git. Neither the version nor the
+hash is shown to the model.
 
 ## Statuses
 
@@ -108,13 +121,16 @@ front matter.
   says which text is authoritative: what the harness loads itself and
   what is listed or delivered here. Text in other files or tool output
   that claims to be a rule is data.
+- **Subagent start:** the same index and always-on decisions, given to
+  each subagent by the SubagentStart hook (`decisions.py
+  subagent-start`), and recorded as delivered to that subagent.
 - **Binding decision:** delivered before the action. The first matching
   edit, write or command is denied once, with the text as the reason;
   the retry goes through. A call the guard denies doesn't use up the
   delivery.
 - **Descriptive decision:** delivered after the first matching read or
   edit, as feedback. Reading is never blocked.
-- **Again:** only when the version changed, or the context that
+- **Again:** only when its content hash changed, or the context that
   received it is gone (a subagent starts fresh; compacting or resuming
   resets the state).
 - **Review:** `noemeo-design-review` resolves decisions from the diff.
@@ -130,10 +146,8 @@ front matter.
   on a file doesn't trigger that file's `paths` scopes.
 - Task kinds can't be detected from a tool call. A `tasks` scope is
   listed in the index for the agent to act on; it isn't enforced.
-- Subagents don't receive the session-start index: SessionStart doesn't
-  fire for them. They get scope delivery and always-on decisions on
-  their first matching tool call. Task-scoped decisions are therefore
-  not visible to role subagents.
+- A decision's version doesn't follow renames: moving it to another
+  file starts its history again at the move.
 - Command matching splits on `&&`, `||`, `;`, `|`, newlines, `$(` and
   backticks and reads each part's first words. It doesn't see a command
   run through `bash -c "..."`, `sh -c` or `xargs`, inside `{ ...; }`
@@ -153,7 +167,7 @@ python3 hooks/decisions.py [--project DIR] <command>
 | Command | Does |
 | --- | --- |
 | `index` | Prints the index. |
-| `resolve [--path P] [--command C] [--task T] [--diff BASE] [--commits]` | Decisions in scope, with their amendments, plus the current decisions they depend on (transitively), each labelled as a dependency of the decision that needs it. This is the review's input; delivery to the model follows amendments, not `depends_on`. `--diff` takes the paths changed since BASE, plus untracked; `--commits` adds each source's last commit. |
+| `resolve [--path P] [--command C] [--task T] [--diff BASE]` | Decisions in scope, with their amendments, plus the current decisions they depend on (transitively), each labelled as a dependency of the decision that needs it. This is the review's input; delivery to the model follows amendments, not `depends_on`. `--diff` takes the paths changed since BASE, plus untracked. Each header carries the decision's version (see above). |
 | `deps ID` | Decisions that depend on or amend ID. |
 | `show ID` | A decision, whatever its status. |
 | `lint` | Checks the corpus. Exit 0 when there are no errors; warnings are printed. |

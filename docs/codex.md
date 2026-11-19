@@ -100,6 +100,10 @@ Gaps:
 - Codex has no Read tool. Files read through the shell get no
   descriptive (post-read) delivery; only binding decisions scoped to a
   command or an edit reach the model.
+- No subagent-start event: Codex subagents don't get the decision
+  index or the always-on decisions when they start (Claude Code's
+  SubagentStart hook runs `decisions.py subagent-start`). They get scope
+  delivery on their tool calls.
 - Whether Codex events carry an agent id is unconfirmed. If they don't,
   subagents share the session's delivery state, so a decision delivered
   to the main agent isn't repeated to a subagent.

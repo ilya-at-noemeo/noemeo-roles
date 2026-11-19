@@ -183,8 +183,12 @@ Fields:
 | `evidence` | Links to measurements or records that support it (optional) |
 | `deliver` | Which part to deliver; default for decision records is their "How to apply" and "Review checks" sections, for a section decision its whole body |
 
-Versions come from Git: a decision's version is the last commit that changed
-its text or fields.
+Versions come from Git: a decision's version is the commit that introduced
+its current committed content (its text and fields), per decision, so a
+section of a longer document keeps its version when other sections
+change; uncommitted edits show as `(uncommitted changes)`. Renames are not
+followed. A content hash of the text and fields is the drift check and the
+re-delivery trigger, so delivery never runs Git.
 
 **Scope** is a set of matchers; any match puts an action in scope:
 
@@ -281,8 +285,8 @@ It is deterministic: same files and inputs, same output.
    - A **descriptive** decision is delivered after the first matching read
      or edit, as feedback on that tool call, so reading is never
      blocked.
-   - A decision is delivered again only if its version changed, or the
-     context that received it is gone.
+   - A decision is delivered again only if its content hash changed, or
+     the context that received it is gone.
    - **Delivery is tracked per context, not per session** (builder
      check; my call). A subagent starts with a fresh context, so it
      gets its own delivery state, keyed by agent id where the harness

@@ -27,7 +27,7 @@ ones that apply to the target:
 
 ```text
 python3 <noemeo-roles>/hooks/decisions.py --project <repo> \
-  resolve --diff <base> --task review --commits
+  resolve --diff <base> --task review
 ```
 
 `<base>` is the base from Step 1. Add `--task <kind>` for each other
@@ -40,7 +40,9 @@ commands), and pass each such command as `--command "<command>"` in the
 same call. The output
 is the decisions in scope for the changed paths, with their amendments
 and the current decisions they depend on (labelled as dependencies),
-each with its version. Check the change
+each with its version (the Git commit that introduced its current
+content, marked `(uncommitted changes)` when the working tree differs).
+Check the change
 against these in Step 3. Then read what the resolver can't know: the
 repo's `CLAUDE.md` (and any nested one in the directories the target
 touches). If the target spans repos, resolve in each repo that
