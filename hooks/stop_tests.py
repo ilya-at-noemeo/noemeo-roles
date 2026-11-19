@@ -30,6 +30,9 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("open", "stop_tests.py")  # before anything that needs 3.12
 
 TIMEOUT_S = 280  # under the hook's own 300s timeout
 

@@ -51,7 +51,8 @@ def old_python():
 
 
 def fake_version(major, minor, micro):
-    return type(sys.version_info)(((major, minor, micro, "final", 0)))
+    # sys.version_info's type can't be instantiated; a plain tuple compares the same way
+    return (major, minor, micro, "final", 0)
 
 
 def sentence(name, version, executable):

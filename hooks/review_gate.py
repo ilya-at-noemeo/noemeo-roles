@@ -28,6 +28,10 @@ from pathlib import Path
 
 sys.dont_write_bytecode = True  # no __pycache__ beside the hooks
 sys.path.insert(0, str(Path(__file__).parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("closed", "review_gate.py")  # before anything that needs 3.12
+
 from review_state import LOG, candidate_bases, latest, toplevel  # noqa: E402
 
 

@@ -13,6 +13,8 @@ import sys
 
 ROOT = Path(__file__).resolve().parent.parent
 HOOKS = ROOT / "hooks"
+sys.path.insert(0, str(HOOKS))
+import pyfloor  # noqa: E402  (old-syntax only, like this file up to main)
 
 
 def project_dir(cwd):
@@ -161,10 +163,28 @@ def dispatch(event):
     return None
 
 
+def below_floor(event):
+    """The hooks need pyfloor.MIN: on an older Python the guard path denies
+    (it can't check), every other event gets a warning and goes on."""
+    if tuple(sys.version_info)[:2] >= pyfloor.MIN:
+        return None
+    reason = pyfloor.message("Noemeo's Codex hooks")
+    if event.get("hook_event_name") == "PreToolUse":
+        return {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }}
+    return {"systemMessage": reason}
+
+
 def main():
     event = {}
     try:
         event = json.load(sys.stdin)
+        floor = below_floor(event if isinstance(event, dict) else {})
+        if floor:
+            print(json.dumps(floor))
+            return
         output = dispatch(event)
         if output:
             print(json.dumps(output))

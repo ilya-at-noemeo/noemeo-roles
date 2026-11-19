@@ -30,6 +30,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import pyfloor  # noqa: E402
+
+pyfloor.check("open", "agent_usage.py")  # before anything that needs 3.12
+
 DEFAULT_LOG = Path.home() / ".claude" / "noemeo-agent-usage.jsonl"
 TOKEN_FIELDS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 

@@ -214,7 +214,7 @@ class StopLint(HookCase):
         # a copy of the hooks whose decisions module fails inside load()/lint_corpus()
         hooks = self.repo.parent / "hooks-broken"
         hooks.mkdir()
-        for name in ("stop_tests.py", "decisions_format.py"):
+        for name in ("stop_tests.py", "decisions_format.py", "pyfloor.py"):
             (hooks / name).write_text((HOOK.parent / name).read_text())
         (hooks / "decisions.py").write_text(
             "class Corpus:\n    pass\n\n"
