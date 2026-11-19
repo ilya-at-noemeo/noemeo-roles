@@ -181,6 +181,16 @@ class ParseRecord(TempCase):
         p = self.write("quoted.md", base + 'tasks: ["a, b", c]\n---\n# T\n')
         self.assertEqual(only(parse_file(p)).tasks, ("a, b", "c"))
 
+    def test_blanks_around_quoted_list_items_are_dropped_inside_quotes_kept(self):
+        base = "---\nid: acme-9\nkind: policy\nstatus: accepted\nbinding: true\nsummary: s\n"
+        p = self.write("q1.md", base + 'tasks: ["design", "review"]\n'
+                       'paths: [ "x/**" ,  "y/**"]\n---\n# T\n')
+        d = only(parse_file(p))
+        self.assertEqual(d.tasks, ("design", "review"))
+        self.assertEqual(d.paths, ("x/**", "y/**"))
+        p = self.write("q2.md", base + 'tasks: ["a b", c]\n---\n# T\n')
+        self.assertEqual(only(parse_file(p)).tasks, ("a b", "c"))
+
     def test_title_of(self):
         p = self.write("0001-acme.md", RECORD)
         self.assertEqual(title_of(p), "0001: Use the acme profile")
