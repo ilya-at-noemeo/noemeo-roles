@@ -686,20 +686,37 @@ Commit the spec and this plan in the same PR.
 
 ---
 
-### Task 8: Pilot in the product repo (owner-paced, separate PR)
+### Task 8: Pilot in a product repo (owner-paced)
 
-**Files (in the pilot product repo, on its own branch):**
-- Modify: `.claude/noemeo-guard.json` (add `decision_roots`)
-- Modify: decision records, one at a time
+**Repos and PRs** (each its own branch and PR):
+- The product repo: `.claude/noemeo-guard.json` (`decision_roots`),
+  its decision records, `CLAUDE.md` / `AGENTS.md`.
+- The generic decision log's repo (a sibling checkout): front matter
+  for its records.
+- Each other repo a product decision governs (`repo:` scope): its
+  `.claude/noemeo-guard.json`, to list the product's decision root.
 
 Not code: this is the rollout the spec describes. Starts only after
 Task 7's PR is merged and the plugin's installed copy is updated
 (`docs/plugin.md`), then a new session is started.
 
-- [ ] **Step 1: Configure roots**: the repo's `docs/decisions`, its
-  architecture and product documents, and the sibling generic decision
-  log. Start a session; confirm the index appears and lists every record
-  as unannotated.
+Settled before it starts (owner, 2026-11-19):
+- **Ids** are `<log>-NNNN`: a short name per log and the record's
+  existing number, so two logs' 0007 stay distinct. Numbers never
+  change. The short names are fixed in Step 1 as a table of root to
+  prefix, approved by the owner.
+- **The generic log gets front matter too**, every record, in the same
+  format and with the same one-at-a-time approval: every record meant
+  for the harness follows one format.
+- **The first record comes through an open PR** that already changes
+  it, so annotating it and checking that PR against the accepted
+  decisions happen together.
+
+- [ ] **Step 1: Configure roots and prefixes.** Roots: the product's
+  `docs/decisions`, its architecture and product documents, and the
+  generic log. Write the table of root to id prefix and get the
+  owner's approval. Start a session; confirm the index appears and
+  lists every record as unannotated.
 - [ ] **Step 2: Measure the baseline**: the size in tokens of the
   repo's `CLAUDE.md` and of the session-start context, before any
   change below.
@@ -707,19 +724,66 @@ Task 7's PR is merged and the plugin's installed copy is updated
   repo's `CLAUDE.md` and `AGENTS.md`; with the owner, classify each as
   (a) already a decision, (b) to become a decision, or (c) orientation
   that stays.
-- [ ] **Step 4: Annotate one record at a time.** With the noemeo-decisions
-  skill, draft front matter for one record (scope, kind, binding), show
-  it to the owner, and set `accepted` only after the owner approves.
-  Run `lint`. Commit each approved record on its own.
+- [ ] **Step 3a: Order the annotation.** `lint` reports an unknown id in
+  `depends_on`, `supersedes` or `amends` as an error, so a record can
+  name only records already annotated. From the references in the
+  records' text, list the order: generic-log records before the product
+  records that depend on them, an original before its amendments, a
+  superseded record before the one superseding it. A record whose
+  dependency isn't annotated yet goes in without that link, and the
+  link is added when the dependency is annotated. A reference cycle is
+  annotated in one commit.
+- [ ] **Step 4: Annotate one record at a time,** in that order. With the
+  noemeo-decisions skill, draft front matter for one record (scope,
+  kind, binding), then, before asking for acceptance:
+  - **Check delivery**: `show <id>` must display each binding rule.
+    By default only "How to apply" and "Review checks" are delivered,
+    and the delivery hook cuts each decision at 4,000 characters
+    (`PER_DECISION_CAP`). A rule that lives only in "Decision" is named
+    in "Review checks", or the record sets `deliver`.
+  - **Check consistency** with every accepted decision, including
+    those accepted but not yet shipped: a decision whose rollout is in
+    phases states its target, and the target counts, not only today's
+    code. Method: read the full index, `show` every accepted decision
+    whose summary touches the same subject, and `resolve` the record's
+    scope. Report conflicts to the owner with the draft.
+  - Show both to the owner; set `accepted` only after the owner
+    approves. Run `lint`. Commit each approved record on its own.
+  - Record what the consistency check found that the change's own
+    reviews had missed, in the PR description; it feeds the replay
+    measurement.
+- [ ] **Step 4b: Complete the links.** Once a record's target is
+  annotated, add the `depends_on`, `supersedes` or `amends` links
+  Step 3a withheld, and rewrite bare-number references inside the
+  annotated records ("supersedes 0003", "decision 0008") to ids. Run
+  `lint`.
+- [ ] **Step 4c: Deliver across repos.** For each annotated decision
+  with `repo:` scope, add this repo's decision root to that repo's
+  `.claude/noemeo-guard.json` (a PR there), and check delivery from a
+  session in that repo.
 - [ ] **Step 5: Replace restated rules with references.** For each (a)
   or (b) rule whose decision is accepted, replace the instruction-file
   text with a one-line reference by id, and rewrite numbered
-  references ("decision 0008") to ids. Edit `AGENTS.md` only with the
-  owner's go.
+  references to ids. Edit `AGENTS.md` only with the owner's go.
 - [ ] **Step 6: Check delivery live**: one edit and one command in the
   scope of an accepted binding decision are refused once with its text,
   then go through.
 - [ ] **Step 7: Measure again**: the same two sizes as Step 2.
+- [ ] **Step 7a: Generate an architecture view,** with a prompt run by
+  hand for the pilot (a skill only if it proves useful), from the
+  accepted decisions plus the code and infra:
+  - It is written outside every decision root and every folder lint
+    scans, opens with a line saying it is generated, and is stamped
+    with each source repo's HEAD commit.
+  - Every statement cites a decision id or a file; "decided" is kept
+    apart from "built" (a phased decision's target versus what exists).
+  - Spot check: 20 statements, each against its citation.
+  - It is a view: never delivered to the harness, never edited by hand
+    (a correction goes to the decision or the code, then it is
+    generated again).
+  - Compare it with the repo's hand-written architecture document:
+    what each has that the other lacks, and what is wrong in either.
+    Decide with the owner whether the hand-written one can retire.
 - [ ] **Step 8: PR** after noemeo-code-reviewer's Ready verdict, when
   the owner asks.
 
@@ -729,3 +793,51 @@ numbered-reference warnings).
 The replay measurement (spec, "Measurement") is a separate study run
 with noemeo-researcher once enough records are annotated; it doesn't
 gate this rollout.
+
+### Task 9: Consolidating amendments
+
+A separate PR in this repo, independent of the pilot.
+
+Amendments stay: an amending decision is a unit of work an agent can
+be given ("implement acme-0013"), it carries its own reasons, and a
+phased amendment lets "true today" and "decided for later" both be
+stated. Their cost is that a current rule is spread over several
+records.
+
+**Files:**
+- Modify: `skills/noemeo-decisions/SKILL.md`, `docs/decisions.md`:
+  - consolidation (below);
+  - the delivery hook's limits, which it doesn't mention yet: each
+    decision's text is cut at 4,000 characters and all texts together
+    at 12,000, and whatever is cut is named with its path;
+  - ids by convention are `<log>-NNNN`, with each repo's table of root
+    to prefix;
+  - how a phased decision states its phases (a "Phases" list in its
+    text, each with what ships) and records which have shipped (the
+    merged PR, noted in its status line).
+- Modify: `.claude-plugin/plugin.json` (minor bump), `docs/plugin.md`
+  if it names the version
+- Test: `tests/test_decisions_docs.py` (the rule is stated; the version
+  pin follows the bump)
+
+The rule:
+- **When:** the agent proposes a consolidation when a decision has two
+  or more current amendments, or when the last phase of a phased
+  amendment has shipped (evidence: the merged PR that ships it). The
+  owner decides; the thresholds only trigger the proposal.
+- **How:** one new decision supersedes the original and all its
+  current amendments in the same change, with the merged text; never
+  merge amendments into accepted text in place. Run `deps` on each
+  superseded id and re-point every `depends_on` and `amends` to the new
+  one in the same change, so `lint` stays clean. The owner accepts it
+  like any decision.
+
+- [ ] **Step 1: Write the failing test**: the skill and
+  `docs/decisions.md` state when and how to consolidate, the delivery
+  limits, the id convention and how phases are stated; the version is
+  the bumped one.
+- [ ] **Step 2: Run it**: `python3 -m unittest tests.test_decisions_docs`
+  fails on the missing text.
+- [ ] **Step 3: Write the skill and doc text, bump the version.**
+- [ ] **Step 4: Run the full suite**; it passes.
+- [ ] **Step 5: Commit; PR** after noemeo-code-reviewer's Ready verdict.
