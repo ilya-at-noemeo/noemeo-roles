@@ -752,9 +752,11 @@ Settled before it starts (owner, 2026-11-19):
   - Record what the consistency check found that the change's own
     reviews had missed, in the PR description; it feeds the replay
     measurement.
-- [ ] **Step 4b: Rewrite bare-number references** inside the annotated
-  records ("supersedes 0003", "decision 0008") to ids, once the target
-  is annotated.
+- [ ] **Step 4b: Complete the links.** Once a record's target is
+  annotated, add the `depends_on`, `supersedes` or `amends` links
+  Step 3a withheld, and rewrite bare-number references inside the
+  annotated records ("supersedes 0003", "decision 0008") to ids. Run
+  `lint`.
 - [ ] **Step 4c: Deliver across repos.** For each annotated decision
   with `repo:` scope, add this repo's decision root to that repo's
   `.claude/noemeo-guard.json` (a PR there), and check delivery from a
@@ -803,9 +805,16 @@ stated. Their cost is that a current rule is spread over several
 records.
 
 **Files:**
-- Modify: `skills/noemeo-decisions/SKILL.md`, `docs/decisions.md`
-  (consolidation, and the 4,000-character per-decision cap, which it
-  doesn't mention yet)
+- Modify: `skills/noemeo-decisions/SKILL.md`, `docs/decisions.md`:
+  - consolidation (below);
+  - the delivery hook's limits, which it doesn't mention yet: each
+    decision's text is cut at 4,000 characters and all texts together
+    at 12,000, and whatever is cut is named with its path;
+  - ids by convention are `<log>-NNNN`, with each repo's table of root
+    to prefix;
+  - how a phased decision states its phases (a "Phases" list in its
+    text, each with what ships) and records which have shipped (the
+    merged PR, noted in its status line).
 - Modify: `.claude-plugin/plugin.json` (minor bump), `docs/plugin.md`
   if it names the version
 - Test: `tests/test_decisions_docs.py` (the rule is stated; the version
@@ -824,9 +833,10 @@ The rule:
   like any decision.
 
 - [ ] **Step 1: Write the failing test**: the skill and
-  `docs/decisions.md` state when and how to consolidate, and the
-  per-decision cap; the version is the bumped one.
-- [ ] **Step 2: Run it**: `python3 -m pytest tests/test_decisions_docs.py -q`
+  `docs/decisions.md` state when and how to consolidate, the delivery
+  limits, the id convention and how phases are stated; the version is
+  the bumped one.
+- [ ] **Step 2: Run it**: `python3 -m unittest tests.test_decisions_docs`
   fails on the missing text.
 - [ ] **Step 3: Write the skill and doc text, bump the version.**
 - [ ] **Step 4: Run the full suite**; it passes.
