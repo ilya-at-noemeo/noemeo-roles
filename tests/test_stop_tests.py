@@ -266,6 +266,30 @@ class StopLint(HookCase):
         self.assertEqual(out["decision"], "block")
         self.assertIn("acme-dup", out["reason"])
 
+    def test_lint_error_in_a_sibling_root_from_a_nested_worktree_names_the_configured_root(self) -> None:
+        wt = self.repo.parent / ".worktrees" / "repo" / "wt"
+        wt.parent.mkdir(parents=True)
+        git(self.repo, "worktree", "add", "-q", "--detach", str(wt))
+        (wt / ".claude").mkdir()
+        (wt / ".claude" / "noemeo-guard.json").write_text(
+            json.dumps({"decision_roots": ["../shared/decisions"]})
+        )
+        shared = self.repo.parent / "shared"  # beside the main checkout only
+        decision(shared, "decisions/a.md", "shared-dup")
+        decision(shared, "decisions/b.md", "shared-dup")
+        proc = subprocess.run(
+            [sys.executable, str(HOOK)],
+            input=json.dumps({"session_id": "s1", "stop_hook_active": False}),
+            capture_output=True, text=True,
+            env=dict(os.environ, CLAUDE_PROJECT_DIR=str(wt)),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stderr)
+        if proc.stdout.strip():
+            self.assertNotEqual(json.loads(proc.stdout).get("decision"), "block", proc.stdout)
+        lines = [ln for ln in (proc.stdout + proc.stderr).splitlines() if ln.strip()]
+        self.assertEqual(len(lines), 1, proc.stdout + proc.stderr)
+        self.assertIn("(../shared/decisions)", lines[0])
+
 
 class StopInstructionFiles(HookCase):
     """A CLAUDE.md or AGENTS.md citing a non-current decision blocks the stop."""

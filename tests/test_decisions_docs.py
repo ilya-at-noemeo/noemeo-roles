@@ -209,9 +209,9 @@ class FollowUpDocs(unittest.TestCase):
         self.assertIn("/usr/bin/python3", hooks)
         self.assertRegex(hooks, r"(?i)3\.9")
 
-    def test_plugin_version_is_0_25_0(self) -> None:
+    def test_plugin_version_is_0_25_1(self) -> None:
         manifest = json.loads((ROOT / ".claude-plugin" / "plugin.json").read_text())
-        self.assertEqual(manifest["version"], "0.25.0")
+        self.assertEqual(manifest["version"], "0.25.1")
 
 
 class InstructionFileDocs(unittest.TestCase):

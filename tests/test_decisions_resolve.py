@@ -26,6 +26,7 @@ from decisions import (  # noqa: E402
     glob_match,
     in_scope_command,
     in_scope_path,
+    lint_corpus,
     load,
     render_index,
     resolve,
@@ -577,6 +578,127 @@ class Worktrees(Fixture):
         d = self.load_wt(repo="widget")
         self.assertFalse(in_scope_path(d, self.wt / "src/a.py"))
         self.assertTrue(in_scope_path(d, self.widget / "src/a.py"))
+
+
+class NestedWorktrees(Fixture):
+    """A linked worktree two levels down (`.worktrees/acme/wt`), so `../shared`
+    from it does not reach the sibling that sits beside the main checkout."""
+
+    def setUp(self):
+        super().setUp()
+        git = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid"]
+        subprocess.run(git + ["commit", "-q", "--allow-empty", "-m", "x"],
+                       cwd=self.acme, check=True)
+        self.wt = self.tmp / ".worktrees" / "acme" / "wt"
+        self.wt.parent.mkdir(parents=True)
+        subprocess.run(["git", "worktree", "add", "-q", "-b", "wt", str(self.wt)],
+                       cwd=self.acme, check=True)
+        self.shared = self.tmp / "shared"
+
+    def config_wt(self, roots):
+        (self.wt / ".claude").mkdir(exist_ok=True)
+        (self.wt / ".claude" / "noemeo-guard.json").write_text(
+            json.dumps({"decision_roots": roots})
+        )
+
+    def ids_wt(self, c):
+        return sorted(d.id for d in c.decisions)
+
+    def test_sibling_root_is_read_beside_the_main_checkout(self):
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md", paths=["src/**"])
+        self.config_wt(["../shared/decisions"])
+        self.assertFalse((self.wt / "../shared").resolve().exists())
+        c = load(self.wt)
+        self.assertEqual(self.ids_wt(c), ["shared-1"])
+        self.assertEqual(c.missing_roots, [])
+
+    def test_sibling_root_with_dotdot_inside_is_normalised(self):
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md", paths=["src/**"])
+        self.config_wt(["../shared/x/../decisions"])
+        self.assertEqual(self.ids_wt(load(self.wt)), ["shared-1"])
+
+    def test_root_inside_the_checkout_is_read_from_the_worktree_not_main(self):
+        self.decision("wt-only", in_repo=self.wt, paths=["src/**"])
+        self.decision("main-only", in_repo=self.acme, paths=["src/**"])
+        self.config_wt(["docs/decisions"])
+        self.assertEqual(self.ids_wt(load(self.wt)), ["wt-only"])
+
+    def test_inside_and_sibling_roots_together(self):
+        self.decision("wt-only", in_repo=self.wt, paths=["src/**"])
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md", paths=["src/**"])
+        self.config_wt(["docs/decisions", "../shared/decisions"])
+        c = load(self.wt)
+        self.assertEqual(self.ids_wt(c), ["shared-1", "wt-only"])
+        self.assertEqual(c.missing_roots, [])
+
+    def test_sibling_beside_the_worktree_only_is_not_read_and_is_reported_missing(self):
+        # Pinned behaviour: a sibling root is always looked up beside the main
+        # checkout; one that exists only beside the worktree is reported missing.
+        beside_wt = self.wt.parent / "shared"
+        self.decision("beside-wt", in_repo=beside_wt, rel="decisions/s.md", paths=["src/**"])
+        self.config_wt(["../shared/decisions"])
+        c = load(self.wt)
+        self.assertEqual(c.decisions, [])
+        self.assertEqual(c.missing_roots, ["../shared/decisions"])
+
+    def test_missing_sibling_is_reported_when_absent_everywhere(self):
+        self.config_wt(["../nowhere/decisions"])
+        self.assertEqual(load(self.wt).missing_roots, ["../nowhere/decisions"])
+
+    def test_absolute_root_is_unchanged(self):
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md", paths=["src/**"])
+        self.config_wt([str(self.shared / "decisions")])
+        c = load(self.wt)
+        self.assertEqual(self.ids_wt(c), ["shared-1"])
+        self.assertEqual(c.missing_roots, [])
+
+    def test_absolute_root_that_does_not_exist_is_missing(self):
+        self.config_wt([str(self.tmp / "gone" / "decisions")])
+        self.assertEqual(len(load(self.wt).missing_roots), 1)
+
+    def test_in_repo_root_that_is_a_symlink_to_outside_stays_the_worktrees_own(self):
+        target = self.tmp / "elsewhere" / "decisions"
+        self.decision("linked-1", in_repo=self.tmp / "elsewhere", rel="decisions/l.md",
+                      paths=["src/**"])
+        (self.wt / "docs").mkdir()
+        (self.wt / "docs" / "linked").symlink_to(target)
+        self.config_wt(["docs/linked"])
+        c = load(self.wt)
+        self.assertEqual(self.ids_wt(c), ["linked-1"])
+        self.assertEqual(c.missing_roots, [])
+
+    def test_session_start_index_from_the_worktree_lists_the_sibling_decision(self):
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md",
+                      summary="Shared rule", paths=["src/**"])
+        self.config_wt(["../shared/decisions"])
+        text = render_index(load(self.wt))
+        self.assertIn("- shared-1: Shared rule", text)
+        self.assertNotIn("configured root not found", text)
+
+    def test_lint_from_the_worktree_does_not_flag_the_sibling_root_missing(self):
+        self.decision("shared-1", in_repo=self.shared, rel="decisions/s1.md", paths=["src/**"])
+        self.config_wt(["../shared/decisions"])
+        errors, warnings = lint_corpus(load(self.wt), self.wt)
+        self.assertEqual([m for m in errors + warnings if "shared/decisions" in m and "not found" in m.lower()], [])
+        self.assertEqual(load(self.wt).missing_roots, [])
+
+
+class NormalCheckoutSiblingRoots(Fixture):
+    def test_sibling_root_resolves_relative_to_the_repo(self):
+        self.decision("widget-1", in_repo=self.widget, rel="decisions/w.md", paths=["src/**"])
+        self.config(["../widget/decisions"])
+        c = load(self.acme)
+        self.assertEqual([d.id for d in c.decisions], ["widget-1"])
+        self.assertEqual(c.missing_roots, [])
+
+    def test_missing_sibling_root_is_reported(self):
+        self.config(["../nowhere/decisions"])
+        self.assertEqual(load(self.acme).missing_roots, ["../nowhere/decisions"])
+
+    def test_absolute_root_is_unchanged(self):
+        self.decision("widget-1", in_repo=self.widget, rel="decisions/w.md", paths=["src/**"])
+        self.config([str(self.widget / "decisions")])
+        self.assertEqual([d.id for d in load(self.acme).decisions], ["widget-1"])
 
 
 if __name__ == "__main__":
