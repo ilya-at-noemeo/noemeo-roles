@@ -71,6 +71,31 @@ def _markdown_files(base: Path) -> list[Path]:
     return sorted(found)
 
 
+def _root_dir(project: Path, root: str) -> Path:
+    """Where a configured root lives. A relative root that leaves the
+    checkout (a sibling such as `../shared/decisions`) is read beside the
+    main repository when `project` is a linked worktree, since worktrees
+    sit elsewhere; a root inside the checkout is always the checkout's own."""
+    base = project / root
+    if Path(root).is_absolute():
+        return base
+    top = _toplevel(project.resolve())
+    if top is None:
+        return base
+    # Lexical, not resolve(): a root inside the checkout may be a symlink
+    # that points elsewhere, and it stays the checkout's own.
+    lexical = Path(os.path.normpath(project.resolve() / root))
+    try:
+        lexical.relative_to(top)
+        return base
+    except ValueError:
+        pass
+    main = _identity(top)
+    if main == top:
+        return base
+    return Path(os.path.normpath(main / os.path.relpath(lexical, top)))
+
+
 def load(project: Path) -> Corpus:
     project = Path(project)
     corpus = Corpus(project=project)
@@ -86,7 +111,7 @@ def load(project: Path) -> Corpus:
     for root in roots:
         if not isinstance(root, str):
             continue
-        base = project / root
+        base = _root_dir(project, root)
         if not base.is_dir():
             corpus.missing_roots.append(root)
             continue

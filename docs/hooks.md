@@ -37,7 +37,8 @@ and CI:
 ```
 
 A repo that keeps decisions lists their folders (relative to the repo,
-sibling checkouts allowed) to switch on the index and delivery:
+sibling checkouts allowed; from a worktree, see [decisions.md](decisions.md))
+to switch on the index and delivery:
 
 ```json
 { "decision_roots": ["docs/decisions"] }

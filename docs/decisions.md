@@ -31,7 +31,10 @@ A repo lists where its decisions live in `.claude/noemeo-guard.json`:
 ```
 
 `decision_roots` are folders under the repo's root. They can name a
-sibling checkout. Every `.md` file under a root is read. Files without a
+sibling checkout. In a linked worktree, a root inside the repo is read
+from the worktree, and a relative root outside it (`../acme-shared/...`)
+is read beside the main checkout, wherever the worktree sits. Every
+`.md` file under a root is read. Files without a
 decision in them are listed in the index by title, as background.
 
 **Layout is yours.** A root can have any hierarchy, with one file per
