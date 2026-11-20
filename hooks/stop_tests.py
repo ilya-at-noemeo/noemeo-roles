@@ -112,7 +112,8 @@ def lint_errors() -> list[str]:
                 continue
             named = [
                 r for r in roots
-                if isinstance(r, str) and any(_inside(s, (repo / r).resolve()) for s in sources)
+                if isinstance(r, str)
+                and any(_inside(s, decisions._root_dir(repo, r).resolve()) for s in sources)
             ] or [str(Path(sources[0]).parent)]
             outside.extend(r for r in named if r not in outside)
         if outside:
