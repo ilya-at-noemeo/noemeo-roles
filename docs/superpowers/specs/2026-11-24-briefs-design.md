@@ -65,8 +65,8 @@ requirements across that gap.
 | The brief, `CLAUDE.local.md` (owner) | This task's requirements and acceptance criteria, for the agents doing it |
 | Skills | Create the brief, and fold lasting knowledge back into `CLAUDE.md` |
 
-The brief is the `CLAUDE.local.md` at the worktree's root: gitignored,
-so it exists only in that worktree, for that task. With a spec, its
+The brief is the `CLAUDE.local.md` at the worktree's root: ignored by
+Git, so it exists only in that worktree, for that task. With a spec, its
 content is the spec analysis brief (requirement headings, "Accepted
 when", definitions, standing rules). Without one, it is the task as the
 developer states it. It never copies `CLAUDE.md`.
@@ -94,10 +94,13 @@ changes.
      permanent `CLAUDE.md`, reviewed in the PR like any change. Task
      requirements don't: they stay in the spec, and a `CLAUDE.md` gets
      at most one line pointing to it.
-   - **Keep a record.** The owner wants the brief preserved for
-     traceability and review; proposed: its final text goes into the PR
-     description, folded, so the reviewer sees what the agent worked
-     against and the record survives the worktree.
+   - **Record it in the PR description (owner).** The brief's final
+     text goes into the PR description, folded, so the reviewer sees
+     what the agent worked against and the record survives the
+     worktree. It is never committed to the repo (owner): the creating
+     skill adds `CLAUDE.local.md` to the repo's `.git/info/exclude`,
+     which ignores it in every worktree without changing a tracked
+     file.
 5. **End.** The worktree is removed after merge, and the brief with it.
 
 ## Briefs and `CLAUDE.md`
@@ -107,7 +110,7 @@ changes.
 | Says | How to work here | What this task must deliver |
 | Applies to | Every session in the directory | Sessions in the task's worktree |
 | Lifetime | Permanent | The task |
-| In Git | Yes | No; its final text is in the PR |
+| In Git | Yes | Never; its final text is in the PR description |
 | Changed by | A reviewed PR | The developer and the session |
 
 The task's requirements can't go in `CLAUDE.md`: they would reach every
