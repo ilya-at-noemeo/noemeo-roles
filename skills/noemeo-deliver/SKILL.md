@@ -1,9 +1,9 @@
 ---
-name: noemeo-ship
-description: Takes a change in a Noemeo repo from request to open pull request -- plan, branch, implement, tests by noemeo-test-engineer, review by noemeo-code-reviewer until it's Ready, then commit, push and PR -- one step at a time, without skipping the test or review step. Use when asked to ship, finish, land or "take to PR" a change, fix or feature end to end, or when a change is implemented and only tests, review and the PR remain. Not for research studies (noemeo-research) or design-only work (noemeo-backend-architect).
+name: noemeo-deliver
+description: Takes a change in a Noemeo repo from request to open pull request -- plan, branch, implement, tests by noemeo-test-engineer, review by noemeo-code-reviewer until it's Ready, then commit, push and PR -- one step at a time, without skipping the test or review step. Use when asked to deliver, implement and land, or "take to PR" a change, fix or feature end to end, or when a change is implemented and only tests, review and the PR remain. Not for research studies (noemeo-research) or design-only work (noemeo-backend-architect), and not Claude Code's /ship command (Claude Ship), which starts from finished work and watches the open PR.
 ---
 
-# Ship a change
+# Deliver a change
 
 The main session runs this chain itself. It plans and implements, then
 hands testing and review to their roles' agents in fresh contexts.
@@ -14,6 +14,8 @@ the user in one line when each step starts.
 
 - Read the repo's `CLAUDE.md`, its decision log (`docs/decisions/`) and
   the foundation's (`../noemeo-foundation/decisions/`, if checked out).
+- A `CLAUDE.local.md` at the worktree root is the task's brief: plan
+  against its requirements and criteria.
 - Restate the change: what changes, what doesn't, which repos, and how
   you'll know it works.
 - A non-trivial design (new boundaries, data custody, a new service or
@@ -33,6 +35,9 @@ the user in one line when each step starts.
 - Several repos get one branch each, with the same name.
 - Note anything already uncommitted in the tree, and leave work that
   isn't yours alone.
+- If the worktree root has no `CLAUDE.local.md`, offer the user a brief
+  (`noemeo-brief`). It is never required: go on without one if they
+  decline.
 
 **Exit:** on a fresh branch from the right base.
 
@@ -52,6 +57,17 @@ relative to this skill's base directory); read it before the first edit.
   `../../roles/working-agreement.md` (relative to this skill's base
   directory) for AWS profiles and paid calls.
 - Run the repo's own checks (lint, format, tests) until they pass.
+- Fold back: working knowledge the task produced that will outlast it
+  (a new hazard, convention or boundary) goes into the relevant
+  permanent `CLAUDE.md`, so review sees it. The task's requirements
+  stay in its spec; a `CLAUDE.md` gets at most one line pointing there.
+- With a brief, keep it out of Git: as untracked work it would change
+  the reviewed fingerprint, and `git add -A` would commit it.
+  - `git check-ignore -q CLAUDE.local.md` must succeed; if it doesn't,
+    add the exclude entry the way `noemeo-brief` does.
+  - `git ls-files --error-unmatch CLAUDE.local.md` must fail. If it
+    succeeds, the brief is tracked or staged: ask the user before
+    `git rm --cached CLAUDE.local.md`.
 
 **Exit:** the change works and the repo's checks pass.
 
@@ -123,7 +139,16 @@ every branch.
   - the review rounds, and what was fixed or accepted;
   - anything the change needs to go live (deploy order, a plugin
     update, another repo's PR first);
-  - a test plan, with what's left unchecked marked as such.
+  - a test plan, with what's left unchecked marked as such;
+  - with a brief, its final text, as the record of what the work was
+    done against, folded in a `<details>` block with a blank line after
+    `</summary>` so its Markdown renders. The brief itself is never
+    committed.
+- GitHub caps the whole body, and each comment, at 65,536 characters.
+  If the brief doesn't fit beside the rest of the body, put as much as
+  fits, split at a heading, and after the PR opens add the rest with
+  `gh pr comment <number> --body-file <file outside the repo>`, one
+  comment per chunk, in order.
 - Push and open the PR in one command that **starts with
   `cd <repo> &&`**. The gate recognises only that leading form; with
   anything else (`cd X;`, a variable assignment first, a later `cd`),

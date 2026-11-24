@@ -80,7 +80,7 @@ the request already chose.
 - Look at the rendered result at phone and desktop widths, if a browser
   tool is available, and compare it with the chosen direction.
 - Run the repo's checks, if it has any (HTML validation, link checks).
-- Ship the branch through the repo's normal path (`noemeo-ship` where
+- Ship the branch through the repo's normal path (`noemeo-deliver` where
   it applies), so `noemeo-code-reviewer` checks the diff, including
   that payment, account and analytics scripts are untouched.
 - Hand it to UX design in a fresh context: the `noemeo-ux-designer`

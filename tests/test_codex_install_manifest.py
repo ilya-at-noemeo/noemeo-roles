@@ -124,17 +124,17 @@ class ManifestTest(unittest.TestCase):
         skills = self.repo / ".agents/skills"
         self.assertEqual((skills / "local-one").resolve(), local.resolve())
         self.assertEqual((skills / "linked").resolve(), elsewhere.resolve())
-        self.assertEqual((skills / "noemeo-ship").resolve(), (ROOT / "skills/noemeo-ship").resolve())
+        self.assertEqual((skills / "noemeo-deliver").resolve(), (ROOT / "skills/noemeo-deliver").resolve())
 
     def test_skill_name_collision_conflicts_unless_same_source(self):
-        clash = self.repo / ".claude/skills/noemeo-ship"
+        clash = self.repo / ".claude/skills/noemeo-deliver"
         clash.mkdir(parents=True)
-        (clash / "SKILL.md").write_text("---\nname: noemeo-ship\n---\n")
+        (clash / "SKILL.md").write_text("---\nname: noemeo-deliver\n---\n")
         message = install_fails([str(self.repo)], self.home)
-        self.assertIn("skill 'noemeo-ship' comes from both", message)
+        self.assertIn("skill 'noemeo-deliver' comes from both", message)
         self.assertFalse((self.repo / "AGENTS.md").exists())
         shutil.rmtree(clash)
-        clash.symlink_to(ROOT / "skills/noemeo-ship", target_is_directory=True)
+        clash.symlink_to(ROOT / "skills/noemeo-deliver", target_is_directory=True)
         self.assertEqual(self.install()[0], 0)
 
     def test_old_agents_skills_symlink_reported_once_and_blocks(self):
@@ -523,8 +523,8 @@ class CopyDriftTest(unittest.TestCase):
         self.assertEqual(installer.copy_drift(ROOT, [self.repo], self.home), [])
 
     def test_codex_cached_skill_differing_from_linked_source_is_problem(self):
-        cached = self.home / ".codex/plugins/cache/m/noemeo/1/skills/noemeo-ship"
-        shutil.copytree(ROOT / "skills/noemeo-ship", cached,
+        cached = self.home / ".codex/plugins/cache/m/noemeo/1/skills/noemeo-deliver"
+        shutil.copytree(ROOT / "skills/noemeo-deliver", cached,
                         ignore=shutil.ignore_patterns("__pycache__", ".DS_Store"))
         self.assertEqual(installer.copy_drift(ROOT, [self.repo], self.home), [])
         (cached / "SKILL.md").write_text("changed\n")
@@ -533,7 +533,7 @@ class CopyDriftTest(unittest.TestCase):
         self.assertIn(str(cached), problems[0])
 
     def test_same_named_skill_of_another_plugin_is_ignored(self):
-        other = self.home / ".codex/plugins/cache/m/unrelated/1/skills/noemeo-ship"
+        other = self.home / ".codex/plugins/cache/m/unrelated/1/skills/noemeo-deliver"
         other.mkdir(parents=True)
         (other / "SKILL.md").write_text("a different plugin's skill\n")
         self.assertEqual(installer.copy_drift(ROOT, [self.repo], self.home), [])
@@ -610,7 +610,7 @@ class RoleDocsTest(unittest.TestCase):
     def test_aws_default_credentials_rule_lives_only_in_working_agreement(self):
         phrase = "never the default credentials"
         places = [*(ROOT / "agents").rglob("*.md"), *(ROOT / "roles").rglob("*.md"),
-                  *(ROOT / "codex").rglob("*.md"), *(ROOT / "skills/noemeo-ship").rglob("*.md")]
+                  *(ROOT / "codex").rglob("*.md"), *(ROOT / "skills/noemeo-deliver").rglob("*.md")]
         found = {p.relative_to(ROOT).as_posix() for p in places
                  if phrase in " ".join(p.read_text().lower().split())}
         self.assertEqual(found, {"roles/working-agreement.md"})

@@ -37,7 +37,7 @@ mechanisms themselves.
    implementation, independent testing, review and delivery are
    connected by declared inputs, outputs, exit criteria and revision
    loops -- not an open-ended conversation.
-   *Status: partly. `noemeo-ship` declares each step from request to
+   *Status: partly. `noemeo-deliver` declares each step from request to
    PR and its exit condition, and the inputs for the test and review
    steps; only the review step's
    exit is enforced (by the review gate). The test step's is not yet
@@ -126,7 +126,7 @@ proof that a change meets its requirements. The reviewer can challenge
 the tests themselves, including missing cases and mistaken assertions.
 Findings go back through implementation and testing, and any edit voids
 an earlier approval. The workflow implemented today is the
-[`noemeo-ship` skill](../skills/noemeo-ship/SKILL.md).
+[`noemeo-deliver` skill](../skills/noemeo-deliver/SKILL.md).
 
 ## What an auditable change should establish
 

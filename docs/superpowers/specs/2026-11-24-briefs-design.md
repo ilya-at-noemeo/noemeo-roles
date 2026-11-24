@@ -83,7 +83,7 @@ changes.
 1. **Create.** A dedicated skill writes `CLAUDE.local.md` (owner): from
    the spec with the spec analysis brief command when there is a spec,
    otherwise from the request. The developer reviews and edits it.
-2. **Offer.** The ship skill, when the worktree root has no
+2. **Offer.** The `noemeo-deliver` skill, when the worktree root has no
    `CLAUDE.local.md`, offers the developer to create one (owner). Never
    required.
 3. **Work.** Claude Code loads `CLAUDE.local.md` at launch, re-reads it
@@ -91,7 +91,7 @@ changes.
    don't, and the parent agent has it. A brief created inside a session
    is in that conversation already; a fresh session picks it up from
    the file.
-4. **Before the PR** (ship skill):
+4. **Before the PR** (`noemeo-deliver`):
    - **Fold back (owner).** Lasting working knowledge the task produced
      (a new hazard, convention or boundary) goes into the relevant
      permanent `CLAUDE.md`, reviewed in the PR like any change. Task
@@ -108,7 +108,7 @@ changes.
      it in every worktree of that clone without changing a tracked
      file. That file belongs to one clone on one machine, so a brief
      written by hand or in another clone isn't covered: before the PR,
-     the ship skill runs `git check-ignore -q CLAUDE.local.md` and, if
+     the `noemeo-deliver` skill runs `git check-ignore -q CLAUDE.local.md` and, if
      the file isn't ignored, adds the exclude entry and makes sure the
      file isn't staged.
 5. **End.** The worktree is removed after merge, and the brief with it.
