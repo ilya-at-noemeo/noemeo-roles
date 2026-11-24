@@ -46,6 +46,9 @@ briefs before it is claimed.
 - Fewer implementation and review iterations.
 - Lower total cost per accepted task.
 - Reduced dependence on human intervention.
+- Easier onboarding of new developers, who get a task's applicable
+  requirements without first learning the whole body of organizational
+  knowledge.
 
 The brief guarantees controlled delivery of approved information, not
 compliance itself. Independent review verifies the resulting
