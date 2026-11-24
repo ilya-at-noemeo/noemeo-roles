@@ -180,6 +180,7 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 | `noemeo-research` | skill | Studies of model-backed features: falsifiable claims, prior work, public benchmarks and their terms, controlled runs with validated graders, research notes and publication packages |
 | `noemeo-test-engineering` | skill | Designing and building automated tests: the right level per behaviour, hermetic and no paid calls, proving tests can fail, wiring into the repo's checks |
 | `noemeo-ship` | skill | Taking a change from request to open PR: plan, branch, implement, tests by `noemeo-test-engineer`, review by `noemeo-code-reviewer` until Ready, then commit, push and PR |
+| `noemeo-brief` | skill | A task's brief in the worktree's `CLAUDE.local.md`: the spec's carried requirements copied verbatim (or the developer's own criteria), kept out of Git, reviewed and corrected by the developer |
 | `noemeo-worktree` | skill | Parallel worktrees ready to work in: outside every repo (no stale `CLAUDE.md` above them), env files copied, dependencies installed so the ruff and test hooks run; removal refuses unsaved work |
 | `noemeo-ai-engineer` | agent | Delegating self-contained AI engineering work (LLM/prompt/eval/ML) to Noemeo's AI engineering role in its own context, with measured results -- prompt design, optimization and hardening on a fixed model included (loads `noemeo-prompt-engineering`) |
 | `noemeo-backend-architect` | agent | Delegated backend design work in its own context (architecture role): a design doc and its rationale, never product code |
