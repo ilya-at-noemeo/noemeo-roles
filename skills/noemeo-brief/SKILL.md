@@ -69,7 +69,11 @@ Verified by: <verbatim>
 ```
 
 - `<commit>` is the spec's approved version:
-  `git log -1 --format=%h -- <spec path>`.
+  `git log -1 --format=%h -- <spec path>`. If that prints nothing (the
+  spec isn't committed) or `git status --porcelain -- <spec path>`
+  prints anything (it has local edits), the approved version isn't the
+  file you read: tell the developer, and write `@ uncommitted` only if
+  they want to go on.
 - Requirements: those the spec marks "Carried by: the change", in the
   spec's order. Each gets exactly the heading and the two lines above.
 - A section with nothing to hold is left out.

@@ -14,6 +14,8 @@ the user in one line when each step starts.
 
 - Read the repo's `CLAUDE.md`, its decision log (`docs/decisions/`) and
   the foundation's (`../noemeo-foundation/decisions/`, if checked out).
+- A `CLAUDE.local.md` at the worktree root is the task's brief: plan
+  against its requirements and criteria.
 - Restate the change: what changes, what doesn't, which repos, and how
   you'll know it works.
 - A non-trivial design (new boundaries, data custody, a new service or
@@ -33,6 +35,9 @@ the user in one line when each step starts.
 - Several repos get one branch each, with the same name.
 - Note anything already uncommitted in the tree, and leave work that
   isn't yours alone.
+- If the worktree root has no `CLAUDE.local.md`, offer the user a brief
+  (`noemeo-brief`). It is never required: go on without one if they
+  decline.
 
 **Exit:** on a fresh branch from the right base.
 
@@ -52,6 +57,14 @@ relative to this skill's base directory); read it before the first edit.
   `../../roles/working-agreement.md` (relative to this skill's base
   directory) for AWS profiles and paid calls.
 - Run the repo's own checks (lint, format, tests) until they pass.
+- Fold back: working knowledge the task produced that will outlast it
+  (a new hazard, convention or boundary) goes into the relevant
+  permanent `CLAUDE.md`, so review sees it. The task's requirements
+  stay in its spec; a `CLAUDE.md` gets at most one line pointing there.
+- With a brief, check `git check-ignore -q CLAUDE.local.md`. If it
+  isn't ignored, keep it out of Git the way `noemeo-brief` does: as
+  untracked work it would change the reviewed fingerprint, and
+  `git add -A` would commit it.
 
 **Exit:** the change works and the repo's checks pass.
 
@@ -123,7 +136,11 @@ every branch.
   - the review rounds, and what was fixed or accepted;
   - anything the change needs to go live (deploy order, a plugin
     update, another repo's PR first);
-  - a test plan, with what's left unchecked marked as such.
+  - a test plan, with what's left unchecked marked as such;
+  - with a brief, its final text, folded in a `<details>` block, as the
+    record of what the work was done against. GitHub caps a body and
+    each comment at 65,536 characters: what doesn't fit goes in PR
+    comments, in order. The brief itself is never committed.
 - Push and open the PR in one command that **starts with
   `cd <repo> &&`**. The gate recognises only that leading form; with
   anything else (`cd X;`, a variable assignment first, a later `cd`),
