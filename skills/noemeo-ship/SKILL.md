@@ -61,10 +61,13 @@ relative to this skill's base directory); read it before the first edit.
   (a new hazard, convention or boundary) goes into the relevant
   permanent `CLAUDE.md`, so review sees it. The task's requirements
   stay in its spec; a `CLAUDE.md` gets at most one line pointing there.
-- With a brief, check `git check-ignore -q CLAUDE.local.md`. If it
-  isn't ignored, keep it out of Git the way `noemeo-brief` does: as
-  untracked work it would change the reviewed fingerprint, and
-  `git add -A` would commit it.
+- With a brief, keep it out of Git: as untracked work it would change
+  the reviewed fingerprint, and `git add -A` would commit it.
+  - `git check-ignore -q CLAUDE.local.md` must succeed; if it doesn't,
+    add the exclude entry the way `noemeo-brief` does.
+  - `git ls-files --error-unmatch CLAUDE.local.md` must fail. If it
+    succeeds, the brief is tracked or staged: ask the user before
+    `git rm --cached CLAUDE.local.md`.
 
 **Exit:** the change works and the repo's checks pass.
 
@@ -137,10 +140,15 @@ every branch.
   - anything the change needs to go live (deploy order, a plugin
     update, another repo's PR first);
   - a test plan, with what's left unchecked marked as such;
-  - with a brief, its final text, folded in a `<details>` block, as the
-    record of what the work was done against. GitHub caps a body and
-    each comment at 65,536 characters: what doesn't fit goes in PR
-    comments, in order. The brief itself is never committed.
+  - with a brief, its final text, as the record of what the work was
+    done against, folded in a `<details>` block with a blank line after
+    `</summary>` so its Markdown renders. The brief itself is never
+    committed.
+- GitHub caps the whole body, and each comment, at 65,536 characters.
+  If the brief doesn't fit beside the rest of the body, put as much as
+  fits, split at a heading, and after the PR opens add the rest with
+  `gh pr comment <number> --body-file <file outside the repo>`, one
+  comment per chunk, in order.
 - Push and open the PR in one command that **starts with
   `cd <repo> &&`**. The gate recognises only that leading form; with
   anything else (`cd X;`, a variable assignment first, a later `cd`),

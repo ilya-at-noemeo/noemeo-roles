@@ -68,12 +68,14 @@ Verified by: <verbatim>
 <the developer's own notes, if any>
 ```
 
-- `<commit>` is the spec's approved version:
-  `git log -1 --format=%h -- <spec path>`. If that prints nothing (the
-  spec isn't committed) or `git status --porcelain -- <spec path>`
-  prints anything (it has local edits), the approved version isn't the
-  file you read: tell the developer, and write `@ uncommitted` only if
-  they want to go on.
+- `<commit>` is the spec's approved version, on the branch the work
+  will merge into (`<base>`, usually `origin/HEAD`):
+  `git log -1 --format=%h <base> -- <spec path>`. If that prints
+  nothing (the spec isn't on the base branch) or
+  `git diff --quiet <base> -- <spec path>` fails (this branch or the
+  working tree changed it), the file you read isn't the approved
+  version: tell the developer, and write `@ uncommitted` only if they
+  want to go on.
 - Requirements: those the spec marks "Carried by: the change", in the
   spec's order. Each gets exactly the heading and the two lines above.
 - A section with nothing to hold is left out.
