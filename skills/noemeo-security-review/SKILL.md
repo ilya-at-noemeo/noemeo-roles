@@ -39,9 +39,12 @@ isn't there, say so rather than citing decisions from memory.
 
 Run each tool that applies, scoped as in step 1 (pass paths in change
 mode; only paths that exist, or Semgrep and zizmor fail the whole
-run). Use the repo's own ruff (its runner, or `.venv/bin/ruff`). Check
-`command -v` first; a missing tool goes under **Not checked** with its
-install command. Never install it yourself.
+run). Use the repo's own ruff (its runner, or `.venv/bin/ruff`), and
+always run the ruff row: it takes under a second, and a repo's own
+config may select only part of `S` or ignore some of it. If the
+repo's lint output (yours or the reviewer's) already shows an `S` hit,
+report it once. Check `command -v` first; a missing tool goes under
+**Not checked** with its install command. Never install it yourself.
 
 Rows marked *network* make the lookups listed below, which the
 working agreement exempts from approval. Skip them only if the request
@@ -75,11 +78,12 @@ For every scanner hit, read the code path: where does the input come
 from, and can someone outside reach it? Keep it only with a concrete
 abuse path (foothold -> action -> impact). Drop false positives, but
 count them per rule with a one-line reason. A suppression in the code
-(`# noqa: S…`, `nosemgrep`) needs a stated reason; one without is a
-Low finding. A vulnerable dependency matters only if the vulnerable
-function or feature is reachable; find where the code calls it (a
-parser that only reads the app's own bundled files isn't parsing
-attacker input) and say whether it is. A dependency group of `dev`
+(`# noqa: S…`, `nosemgrep`; grep the scoped files, since scanners
+hide them) needs a stated reason; one without is a Low finding. A
+vulnerable dependency matters only if the vulnerable function or
+feature is reachable; find where the code calls it (a parser that
+only reads the app's own bundled files isn't parsing attacker input)
+and say whether it is. A dependency group of `dev`
 isn't proof: the same package may also be a runtime dependency.
 
 No hit isn't clean: lockfile scanners don't see native libraries
