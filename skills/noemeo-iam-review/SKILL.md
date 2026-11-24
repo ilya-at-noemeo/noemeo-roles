@@ -7,7 +7,7 @@ description: Security review of AWS IAM and CI deploy access in Noemeo repos -- 
 
 Finds ways a role, policy or workflow grants more than intended. Static
 by default; reads Terraform and workflow YAML, never applies anything.
-Complements `/security-review` (general code security) and
+Complements `noemeo-security-review` (application code security) and
 `noemeo-design-review` (all decisions); this one goes deep on access.
 
 ## Step 1: Scope

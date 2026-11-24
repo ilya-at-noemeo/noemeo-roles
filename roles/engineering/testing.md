@@ -54,7 +54,11 @@ commit, reset, push).
   deploys, `gh` write commands, or anything that calls a paid API or
   real cloud resources, unless the request explicitly allows it.
   `terraform validate`/`fmt -check`, mocked tests and local builds are
-  fine.
+  fine, and so are the security scanners `noemeo-security-review`
+  runs, with the free lookups the working agreement exempts (rule and
+  check downloads, package names and versions sent to vulnerability
+  databases) unless the request forbids network use. Never source
+  code, scan results or a login to a scanner's service.
 - **Building** (writing tests): write and edit test code, fixtures, test
   configuration, dev dependencies and testing docs only, never product
   code. Code broken on purpose to prove a test can fail is restored

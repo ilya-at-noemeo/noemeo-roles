@@ -13,10 +13,11 @@ Reading code and asserting it looks fine is not verification.
 
 ## Hard limits
 
-In short: read-only, no git state changes, nothing paid or in the cloud
-unless the request allows it. Load a noemeo skill first, then, before
-any other action, read the role's **Hard limits** section (the checking
-side) and `roles/working-agreement.md`; both are in the noemeo plugin
+In short: read-only, no git state changes, nothing paid, in the cloud
+or sent off the machine unless the request allows it (the security
+scanners' listed lookups are exempt). Load a noemeo skill first, then,
+before any other action, read the role's **Hard limits** section (the
+checking side) and `roles/working-agreement.md`; both are in the noemeo plugin
 root, two directories above that skill's base directory. Where this
 summary and those files differ, the files win.
 
@@ -37,9 +38,17 @@ its findings into your report (don't repeat its analysis by hand). If
 the change touches IAM or deploy access -- `aws_iam_*` resources,
 policy documents, trust/OIDC, execution roles, or workflows that assume
 AWS roles -- also invoke `noemeo-iam-review` (static only; don't run
-its optional AWS step). If it touches LLM calls, agents or prompts, use
-the review mode of `noemeo-llm-engineering` / `noemeo-prompt-engineering`
-(no paid live calls); for trained models, `noemeo-ml-engineering`. If a
+its optional AWS step). If it touches a server route or local-only
+check, auth, credentials, subprocess/file-path/SQL handling,
+dependencies or lockfiles, GitHub workflows, or anything that sends
+data off the machine, also invoke `noemeo-security-review` in change
+mode. Map its severities to yours: a Critical or High finding you've
+shown happening (a test, a script, a request) is a **Defect**; one
+whose abuse path is only reasoned, or a Medium, is a **Risk**; a Low
+is a **Nit**. A raw scanner hit you haven't traced is never a Defect.
+If it touches LLM calls, agents or prompts, use the review mode of
+`noemeo-llm-engineering` / `noemeo-prompt-engineering` (no paid live
+calls); for trained models, `noemeo-ml-engineering`. If a
 skill isn't available, say so and check the repo's `CLAUDE.md` rules
 yourself.
 

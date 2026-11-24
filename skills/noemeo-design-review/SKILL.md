@@ -8,7 +8,7 @@ description: Reviews a design doc, plan, PR, diff or proposed change against Noe
 Checks one target against rules that are already settled. It finds
 places where a design or change contradicts a decision; it doesn't
 re-argue the decisions and isn't a general bug hunt (that's
-`/code-review`; security is `/security-review`).
+`/code-review`; security is `noemeo-security-review`).
 
 ## Step 1: Pin down the target
 

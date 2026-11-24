@@ -176,6 +176,7 @@ updates: [Claude Code](docs/plugin.md), [Codex](docs/codex.md).
 | `noemeo-product-management` | skill | Planning and tracking: sweeping loose commitments into a GitHub-issue backlog, milestones with exit criteria, feature requirements, priority proposals and status -- the owner decides |
 | `noemeo-go-to-market` | skill | Messaging, public copy drafts, launch and channel plans, pricing proposals and copy review -- every claim traced to evidence, no manipulation; the owner publishes and decides |
 | `noemeo-iam-review` | skill | Security review of IAM and CI deploy access: trust/OIDC, least privilege, environment separation, escalation paths, role-assuming workflows |
+| `noemeo-security-review` | skill | Security review of application code, per change or whole repo: local scanners triaged by hand, then a threat checklist (data custody, local servers, injection, LLM prompt injection, secrets, webhooks, supply chain, distribution) |
 | `noemeo-backend-architecture` | skill | Designing or reviewing backend systems: data ownership and custody, boundaries, contract-first APIs, failure modes, schemas, security, observability and cost sized to real need |
 | `noemeo-research` | skill | Studies of model-backed features: falsifiable claims, prior work, public benchmarks and their terms, controlled runs with validated graders, research notes and publication packages |
 | `noemeo-test-engineering` | skill | Designing and building automated tests: the right level per behaviour, hermetic and no paid calls, proving tests can fail, wiring into the repo's checks |
