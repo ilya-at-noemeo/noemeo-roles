@@ -100,10 +100,17 @@ changes.
    - **Record it in the PR description (owner).** The brief's final
      text goes into the PR description, folded, so the reviewer sees
      what the agent worked against and the record survives the
-     worktree. It is never committed to the repo (owner): the creating
-     skill adds `CLAUDE.local.md` to the repo's `.git/info/exclude`,
-     which ignores it in every worktree without changing a tracked
-     file.
+     worktree. GitHub caps a PR description at 65,536 characters; a
+     longer brief goes in as far as it fits, and the rest follows in
+     PR comments, in order.
+   - **Never committed (owner).** The creating skill adds
+     `CLAUDE.local.md` to the repo's `.git/info/exclude`, which ignores
+     it in every worktree of that clone without changing a tracked
+     file. That file belongs to one clone on one machine, so a brief
+     written by hand or in another clone isn't covered: before the PR,
+     the ship skill runs `git check-ignore -q CLAUDE.local.md` and, if
+     the file isn't ignored, adds the exclude entry and makes sure the
+     file isn't staged.
 5. **End.** The worktree is removed after merge, and the brief with it.
 
 ## Briefs and `CLAUDE.md`
