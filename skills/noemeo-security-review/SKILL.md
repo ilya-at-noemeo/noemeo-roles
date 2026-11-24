@@ -11,8 +11,9 @@ decide which are real. Report only; never edit or install anything.
 
 Complements `noemeo-iam-review` (access in depth: invoke it, don't
 duplicate it, when IAM or role-assuming workflows are in scope) and
-`noemeo-design-review` (all decisions), and `/security-review` (a
-general diff read without tools or Noemeo's rules).
+`noemeo-design-review` (all decisions). In Noemeo repos it replaces
+`/security-review`, a general diff read without tools or Noemeo's
+rules.
 
 ## Step 1: Mode and scope
 
@@ -57,7 +58,7 @@ checked**.
 | Python, JS, others (*network*) | `semgrep scan --metrics off --config p/python --config p/owasp-top-ten <paths>` (add `p/javascript` etc. per language) |
 | Lockfiles (*network*) | `osv-scanner scan source --format json -L <lockfile>` per lockfile: the changed ones in change mode, those `git ls-files` lists in system mode (`-r .` also walks `.venv` and `node_modules`). Group the result by package: advisory count, highest severity, fixed version, dependency group. "No package sources found" means nothing to scan |
 | Git history | `gitleaks git -v --redact --no-banner --log-opts="<base>..HEAD"`; system mode: full history (`-v` gives file and line) |
-| Uncommitted files | `gitleaks dir -v --redact --no-banner <file>`, once per changed tracked file, skipping guard-listed files. Never more than one path: given several, gitleaks ignores them and scans the whole working tree, secret files included |
+| Uncommitted changes | `python3 <this skill's base directory>/scripts/scan_uncommitted_secrets.py`, from inside the repo: one redacted gitleaks call per changed or untracked file, skipping the guard's secret files, binaries and files over 5 MB. Never `gitleaks dir` or a piped stream yourself: several paths scan the whole working tree, and a combined stream can show one file's secret, unredacted, beside another's finding |
 | `.github/workflows/` | `zizmor --offline .github/workflows`; offline skips its online audits (impostor commits, known-vulnerable actions): list them under **Not checked** |
 | Terraform, Dockerfiles (*network*) | `trivy config <dir>`; offline, `trivy config --skip-check-update <dir>` works only if its check bundle is already cached |
 | A built macOS app (only if named) | `codesign --verify --strict --deep -vv <app>`, `codesign -d --entitlements - <app>`, `spctl -a -t exec -vv <app>` |
