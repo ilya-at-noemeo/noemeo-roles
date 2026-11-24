@@ -33,6 +33,13 @@ permission here.
   budget. That approval never overrides a role's hard limits; a role
   without them is bound by this rule alone. Run a small first batch and
   report its measured cost before continuing.
+- Exception, approved by the owner: the free lookups of Semgrep (run
+  with `--metrics off`), osv-scanner and trivy that
+  `noemeo-security-review` lists (rule and check downloads; package
+  names and versions sent to vulnerability databases) need no
+  approval. Nothing else they could send -- usage metrics, source
+  code, scan results, a login or upload to their services -- is
+  covered, and widening that list needs the owner's approval.
 
 ## Review
 
