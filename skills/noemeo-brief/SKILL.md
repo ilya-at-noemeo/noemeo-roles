@@ -1,6 +1,6 @@
 ---
 name: noemeo-brief
-description: Writes or updates a task's brief -- the worktree's CLAUDE.local.md, which Claude Code loads at launch, re-reads after compaction and gives to subagents -- from an approved operational spec or, without one, from the developer's request, kept out of Git. Use when the developer asks for a brief, a CLAUDE.local.md or "the requirements for this session", when starting work on a task that has a spec, when the ship skill offers one, or when the task's requirements change mid-task.
+description: Writes or updates a task's brief -- the worktree's CLAUDE.local.md, which Claude Code loads at launch, re-reads after compaction and gives to subagents -- from an approved operational spec or, without one, from the developer's request, kept out of Git. Use when the developer asks for a brief, a CLAUDE.local.md or "the requirements for this session", when starting work on a task that has a spec, when noemeo-deliver offers one, or when the task's requirements change mid-task.
 ---
 
 # Task brief

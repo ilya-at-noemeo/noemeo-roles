@@ -1,9 +1,9 @@
 ---
-name: noemeo-ship
-description: Takes a change in a Noemeo repo from request to open pull request -- plan, branch, implement, tests by noemeo-test-engineer, review by noemeo-code-reviewer until it's Ready, then commit, push and PR -- one step at a time, without skipping the test or review step. Use when asked to ship, finish, land or "take to PR" a change, fix or feature end to end, or when a change is implemented and only tests, review and the PR remain. Not for research studies (noemeo-research) or design-only work (noemeo-backend-architect).
+name: noemeo-deliver
+description: Takes a change in a Noemeo repo from request to open pull request -- plan, branch, implement, tests by noemeo-test-engineer, review by noemeo-code-reviewer until it's Ready, then commit, push and PR -- one step at a time, without skipping the test or review step. Use when asked to deliver, implement and land, or "take to PR" a change, fix or feature end to end, or when a change is implemented and only tests, review and the PR remain. Not for research studies (noemeo-research) or design-only work (noemeo-backend-architect), and not Claude Code's /ship command (Claude Ship), which starts from finished work and watches the open PR.
 ---
 
-# Ship a change
+# Deliver a change
 
 The main session runs this chain itself. It plans and implements, then
 hands testing and review to their roles' agents in fresh contexts.

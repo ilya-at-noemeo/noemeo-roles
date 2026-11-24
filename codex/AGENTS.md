@@ -26,7 +26,7 @@ noemeo-roles (the parent of this file's directory).
    Resolve its relative paths from its own directory, even when it was
    found through `.agents/skills`.
 
-An end-to-end change follows `skills/noemeo-ship/SKILL.md`, up to the
+An end-to-end change follows `skills/noemeo-deliver/SKILL.md`, up to the
 endpoint the user asked for. It is not permission to publish.
 
 ## Translate

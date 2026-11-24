@@ -380,7 +380,7 @@ class CodexInstallTest(unittest.TestCase):
             with contextlib.redirect_stdout(io.StringIO()):
                 self.assertEqual(installer.main([str(repo)]), 0)
             self.assertEqual(installer.compare(ROOT, repo)[1], {})
-            self.assertEqual((repo / ".agents/skills/noemeo-ship").resolve(), ROOT / "skills/noemeo-ship")
+            self.assertEqual((repo / ".agents/skills/noemeo-deliver").resolve(), ROOT / "skills/noemeo-deliver")
             agents = list((repo / ".codex/agents").glob("*.toml"))
             self.assertEqual(len(agents), 7)
             for agent in agents:
