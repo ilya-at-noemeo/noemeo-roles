@@ -1,6 +1,6 @@
 ---
 name: noemeo-research
-description: Runs research in Noemeo repos -- framing a falsifiable question, checking prior work and whether it covers today's models, choosing and licensing public benchmarks, designing controlled experiments with repeated runs and validated graders, running them within a budget, keeping raw data immutable, and writing research notes and publication packages (including null results). Use when asked to study, measure or evaluate how a model-backed feature behaves, compare conditions, build an evaluation on a public dataset, or prepare results for publication.
+description: Runs research in Noemeo repos -- framing a falsifiable question, checking prior work and whether it covers today's models, choosing and licensing public benchmarks, designing controlled experiments with repeated runs and validated graders, running them within a budget, keeping raw data immutable, and writing research notes and publication packages (including null results). Covers both model-on-dataset evaluations and agent-methodology experiments (isolated agent sessions as arms, blind-scoring their artifacts, inter-rater reliability), with studies kept in the dedicated noemeo-research repo. Use when asked to study, measure or evaluate how a model-backed feature or an agent behaves, compare conditions, build an evaluation on a public dataset, or prepare results for publication.
 ---
 
 # Noemeo research
@@ -17,6 +17,14 @@ layout, data rules) and `docs/decisions/`, plus the generic decision
 log in `../noemeo-foundation/decisions/` (a sibling checkout). Note
 what may not be used (users' content, sessions,
 paid calls without approval) before designing anything.
+
+**Where the study lives.** Noemeo's research home is the dedicated
+`noemeo-research` repo (a sibling checkout), not the product/infra repos --
+keeping study data, transcripts and bespoke scripts out of deployables. Put
+methodology/agent studies under `methodology/<YYYY-MM-slug>/` and product-AI
+studies under `photo/<YYYY-MM-slug>/`; read that repo's `CLAUDE.md` for the
+conventions. A study that audits product code **pins its commits/tags by
+reference** and never copies that code into the research repo.
 
 ## Step 2: Frame the claim
 
@@ -114,6 +122,54 @@ Only after the result survives repeated runs and controls:
    used.
 7. **Owner approval** before anything is submitted or posted. Research
    prepares; the owner submits.
+
+## Agent-methodology experiments (the subject is an agent, not a dataset)
+
+Some studies measure not how a *model* behaves on dataset items, but how an
+*agent* behaves on a task -- e.g. "does a task brief change what an agent
+delivers". The backbone above is unchanged (falsifiable claim, one-thing-differs
+arms, controls, repeated runs, immutable data, blind graders, `metrics.json`,
+null results). These additional patterns apply; follow them rather than copying
+any one study's scripts verbatim (the harness is young -- patterns, not a
+template):
+
+- **Arms are headless agent sessions.** Each arm is a whole agent run launched
+  as a fresh **headless CLI process** -- Claude Code (`claude -p "<task>"
+  --output-format json`, optionally `--model`/`--effort`/`--permission-mode`) or
+  Codex (`codex exec`, its non-interactive mode) -- **not** an in-session Task
+  subagent (a subagent inherits this session's context and brief, which would
+  break blinding). Both are run through `Bash`; both are **paid calls** (see the
+  cost rule) and need the provider's auth configured. The harness itself can be
+  the thing under test: to ask "does X help in Claude Code vs Codex", the harness
+  is the arm and everything else is held constant.
+- **Isolate every arm.** One **own git worktree + fresh session** per arm so runs
+  can't contaminate each other (a shared working tree silently corrupts the
+  comparison); use the `noemeo-worktree` skill, never a bare `git worktree add`.
+  Record the harness, model, effort and session settings, held constant except
+  for the one thing that differs. Capture each run's session id / transcript and
+  its usage from the CLI's JSON output as immutable raw data.
+- **Pin the code-under-test by reference.** Start every arm from one base commit;
+  tag each arm's produced commit durably in the *product* repo; the research
+  repo records the tags, never the code.
+- **Score the artifacts, blind to arm.** The output is an artifact (a PR, a
+  diff), not a dataset label. Anonymise and shuffle the arms' artifacts, score
+  them in a fresh session with **no access to this study's brief/hypotheses**,
+  against a frozen rubric. Report residual issues and coverage.
+- **Inter-rater reliability across grader agents.** Two or more independent blind
+  graders; report unanimous/majority rates and an agreement statistic (Cohen's
+  kappa for two raters, Fleiss' for three or more). A single grader's verdict is
+  a draft.
+- **Cost in tokens, not only dollars.** On a subscription plan `total_cost_usd`
+  from `claude -p --output-format json` is an unbilled API-price *estimate* --
+  report it as such, and report output-token use (the cost/effort axis) and the
+  spread. Rate-limit throttling adds latency, not tokens.
+- **Rubric is itself auditable.** A hand-authored rubric is a source of error;
+  version it, and when a row is wrong, correct it in a new version and re-tally
+  deterministically, preserving the original.
+
+Worked reference: `noemeo-research/methodology/2026-11-briefs-gap-analysis/`
+(arms, blind grading, inter-rater, provenance-by-reference, a corrected rubric).
+Reusable helpers graduate into `noemeo-research/lib/` only on second use.
 
 ## Report
 
