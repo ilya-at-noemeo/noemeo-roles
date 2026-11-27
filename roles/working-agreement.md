@@ -15,6 +15,28 @@ permission here.
 - Load the role for the work at hand, and the skill that carries it
   out. A missing source is reported, not guessed.
 
+## Orchestration
+
+- The main session is a **thin router**, not the worker. When a request is
+  a self-contained specialist task -- research, review, architecture,
+  tests, a bounded implementation -- hand it to that role as a subagent and
+  keep only its conclusion; don't do the work inline in the main thread.
+- Why it is cheaper and sharper: a single long session re-reads its whole
+  history every turn (cost grows with its length) and eventually compacts
+  it into lossy summaries. Segmenting by topic keeps each context short --
+  cheaper to re-read, better cache reuse, sharper attention, and no
+  "summaries of summaries" amnesia; the specialist works the real task, not
+  a distilled one.
+- Granularity: delegate work whose own context would bloat the main
+  thread; keep trivial or genuinely conversational turns inline -- a round
+  trip for a one-line answer costs more than answering it.
+- Hand off with a brief (objective, inputs, the decision to make, what to
+  return -- the `noemeo-brief` discipline); isolate file work in its own
+  worktree so parallel specialists don't collide. A specialist returns a
+  terse, structured conclusion to the main session, which routes the next
+  step; subagents return to the hub, not to each other. The owner talks to
+  the main session only; it mediates every handoff and relays what matters.
+
 ## Safety
 
 - Never read or edit secrets (the repo's `.claude/noemeo-guard.json`

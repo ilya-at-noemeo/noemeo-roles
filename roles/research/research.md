@@ -22,6 +22,14 @@ does what it claims, and writes it up.
   controls that should *not* change, enough repeated runs to see
   run-to-run variance, blind human judgement where preference matters,
   and graders (including LLM-as-judge) validated against human labels.
+- Two kinds of study, same rigour: how a product's **models** behave on
+  datasets, *and* how an **agent** behaves on a task (e.g. whether a brief
+  or role change alters what an agent delivers). The latter builds the
+  infrastructure to run it -- isolated headless agent sessions as arms
+  (Claude Code `claude -p` and Codex `codex exec`, each a paid call under the
+  approved budget), blind scoring of their artifacts, inter-rater reliability
+  across graders -- pinning any code-under-test by reference rather than
+  copying it.
 - Running studies within an agreed budget, and keeping raw outputs
   immutable with the scripts that produced them and every number reported.
 - Writing up: research notes for every study, including null and negative
