@@ -18,9 +18,13 @@ permission here.
 ## Orchestration
 
 - The main session is a **thin router**, not the worker. When a request is
-  a self-contained specialist task -- research, review, architecture,
-  tests, a bounded implementation -- hand it to that role as a subagent and
-  keep only its conclusion; don't do the work inline in the main thread.
+  a self-contained specialist task -- research, review, architecture, a
+  test suite, a design critique -- hand it to that role as a subagent and
+  keep only its conclusion; don't do the work inline in the main thread. A
+  skill that defines its own chain governs its own split and takes
+  precedence here: `noemeo-deliver`, for one, keeps planning and
+  implementation in the main session and delegates only testing and review.
+  Follow the skill where it speaks; this rule governs where nothing else does.
 - Why it is cheaper and sharper: a single long session re-reads its whole
   history every turn (cost grows with its length) and eventually compacts
   it into lossy summaries. Segmenting by topic keeps each context short --
@@ -30,9 +34,10 @@ permission here.
 - Granularity: delegate work whose own context would bloat the main
   thread; keep trivial or genuinely conversational turns inline -- a round
   trip for a one-line answer costs more than answering it.
-- Hand off with a brief (objective, inputs, the decision to make, what to
-  return -- the `noemeo-brief` discipline); isolate file work in its own
-  worktree so parallel specialists don't collide. A specialist returns a
+- Hand off with a crisp brief -- objective, inputs, the decision to make,
+  what to return (the shape a good handoff takes; `noemeo-brief` itself is
+  the task-level form of this, a worktree's `CLAUDE.local.md`); isolate file
+  work in its own worktree so parallel specialists don't collide. A specialist returns a
   terse, structured conclusion to the main session, which routes the next
   step; subagents return to the hub, not to each other. The owner talks to
   the main session only; it mediates every handoff and relays what matters.

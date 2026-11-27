@@ -156,8 +156,9 @@ template):
   them in a fresh session with **no access to this study's brief/hypotheses**,
   against a frozen rubric. Report residual issues and coverage.
 - **Inter-rater reliability across grader agents.** Two or more independent blind
-  graders; report unanimous/majority rates and an agreement statistic (e.g.
-  Fleiss' kappa). A single grader's verdict is a draft.
+  graders; report unanimous/majority rates and an agreement statistic (Cohen's
+  kappa for two raters, Fleiss' for three or more). A single grader's verdict is
+  a draft.
 - **Cost in tokens, not only dollars.** On a subscription plan `total_cost_usd`
   from `claude -p --output-format json` is an unbilled API-price *estimate* --
   report it as such, and report output-token use (the cost/effort axis) and the
